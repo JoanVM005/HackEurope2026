@@ -17,6 +17,9 @@ export function PatientCard({ patient, onOpen }: PatientCardProps) {
       <span className="patient-card__name">
         {patient.firstName} {patient.lastName}
       </span>
+      <span className="patient-card__preference">
+        {patient.timePreferences ? `Pref: ${patient.timePreferences}` : 'Pref: none set'}
+      </span>
       <span className="patient-card__timestamp">{formattedTimestamp}</span>
     </button>
   )

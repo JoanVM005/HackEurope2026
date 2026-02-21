@@ -12,6 +12,7 @@ interface PatientResponseDto {
   first_name: string
   last_name: string
   description: string
+  time_preferences?: string | null
   admitted_at: string | null
   created_at: string
   updated_at: string
@@ -41,6 +42,7 @@ interface CreatePatientPayload {
   first_name: string
   last_name: string
   description: string
+  time_preferences?: string | null
   admitted_at: string | null
 }
 
@@ -48,6 +50,7 @@ interface UpdatePatientPayload {
   first_name?: string
   last_name?: string
   description?: string
+  time_preferences?: string | null
   admitted_at?: string | null
 }
 
@@ -111,6 +114,7 @@ function mapPatientDtoToUi(dto: PatientResponseDto): PatientCardData {
     firstName: dto.first_name,
     lastName: dto.last_name,
     description: dto.description,
+    timePreferences: dto.time_preferences ?? '',
     admissionTimestamp: toDatetimeLocal(dto.admitted_at),
   }
 }

@@ -7,6 +7,7 @@ export interface PatientCardData {
   firstName: string
   lastName: string
   description: string
+  timePreferences: string
   admissionTimestamp: string
 }
 

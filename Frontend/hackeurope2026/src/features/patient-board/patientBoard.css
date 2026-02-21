@@ -74,6 +74,10 @@
   grid-column: span 2;
 }
 
+.patient-board__input-wrap--preferences {
+  grid-column: span 2;
+}
+
 .patient-board__input-wrap span,
 .patient-board__test-options legend,
 .patient-popup__fields span,
@@ -243,6 +247,14 @@
   color: var(--muted);
   font-size: 0.88rem;
   font-weight: 600;
+}
+
+.patient-card__preference {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .card-btn {
