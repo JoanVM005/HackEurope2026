@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Callable
@@ -85,6 +86,7 @@ class PlannerService:
     def _build_context_hash(
         self,
         patient_description: str,
+        time_preferences: str | None,
         task_name: str,
         status: str,
         due_at: datetime | None,
@@ -95,6 +97,7 @@ class PlannerService:
         raw = "|".join(
             [
                 patient_description.strip(),
+                (time_preferences or "").strip(),
                 task_name.strip(),
                 status,
                 normalized_due,
@@ -124,6 +127,7 @@ class PlannerService:
                 patient_external_id=patient.patient_id,
                 patient_name=patient_name,
                 description=patient.description,
+                time_preferences=patient.time_preferences,
                 admitted_at=self._to_utc(patient.admitted_at),
                 tasks=tasks,
             )
@@ -153,7 +157,15 @@ class PlannerService:
         llm_result = self._llm_client.estimate_priority(
             patient_description=context.description,
             task_title=task_name,
-            task_details=None,
+            task_details=(
+                json.dumps(
+                    {"time_preferences": context.time_preferences},
+                    separators=(",", ":"),
+                    sort_keys=True,
+                )
+                if context.time_preferences
+                else None
+            ),
         )
         pending_cache_updates.append(
             PlannerLlmCacheUpdate(
@@ -287,6 +299,7 @@ class PlannerService:
             for task in context.tasks:
                 context_hash = self._build_context_hash(
                     patient_description=context.description,
+                    time_preferences=context.time_preferences,
                     task_name=task.task_name,
                     status=task.status.value,
                     due_at=task.due_at,
