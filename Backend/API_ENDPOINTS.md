@@ -1,0 +1,246 @@
+# API Endpoints Reference
+
+Base URL (local): `http://127.0.0.1:8000`
+
+All timestamps are ISO-8601 (`YYYY-MM-DDTHH:MM:SSZ`) and normalized to UTC.
+
+## Common Error Shape
+Most errors use FastAPI default:
+```json
+{
+  "detail": "error message"
+}
+```
+
+## Health
+
+### `GET /health`
+- Description: Service health check.
+- Request body: none.
+- Response `200`:
+```json
+{
+  "status": "ok",
+  "env": "dev"
+}
+```
+
+## Patients
+
+### `POST /patients`
+- Description: Create a patient.
+- Request body:
+```json
+{
+  "patient_id": "P-001",
+  "first_name": "Elena",
+  "last_name": "Ruiz",
+  "description": "Severity: critical",
+  "admitted_at": "2026-02-21T08:00:00Z"
+}
+```
+- Response `201` (`PatientResponse`):
+```json
+{
+  "id": "uuid",
+  "patient_id": "P-001",
+  "first_name": "Elena",
+  "last_name": "Ruiz",
+  "description": "Severity: critical",
+  "admitted_at": "2026-02-21T08:00:00+00:00",
+  "created_at": "2026-02-21T09:00:00+00:00",
+  "updated_at": "2026-02-21T09:00:00+00:00"
+}
+```
+- Errors: `400`, `409`, `502`.
+
+### `GET /patients`
+- Description: List patients.
+- Request body: none.
+- Response `200`: `PatientResponse[]`.
+- Errors: `502`.
+
+### `GET /patients/{patient_id}`
+- Description: Get patient by external `patient_id`.
+- Path params:
+  - `patient_id` (string)
+- Response `200`: `PatientResponse`.
+- Errors: `404`, `502`.
+
+### `PUT /patients/{patient_id}`
+- Description: Partial update by external `patient_id`.
+- Path params:
+  - `patient_id` (string)
+- Request body (at least one field):
+```json
+{
+  "first_name": "Elena",
+  "last_name": "Ruiz",
+  "description": "Updated",
+  "admitted_at": "2026-02-21T08:30:00Z"
+}
+```
+- Response `200`: `PatientResponse`.
+- Errors: `400`, `404`, `502`.
+
+### `DELETE /patients/{patient_id}`
+- Description: Delete patient by external `patient_id`.
+- Response `204`: empty body.
+- Errors: `404`, `502`.
+
+## Task Definitions
+
+### `POST /task-definitions`
+- Description: Create a task definition.
+- Request body:
+```json
+{
+  "name": "Blood test"
+}
+```
+- Response `201` (`TaskDefinitionResponse`):
+```json
+{
+  "id": "uuid",
+  "name": "Blood test",
+  "created_at": "2026-02-21T09:00:00+00:00",
+  "updated_at": "2026-02-21T09:00:00+00:00"
+}
+```
+- Errors: `400`, `409`, `502`.
+
+### `GET /task-definitions`
+- Description: List task definitions.
+- Response `200`: `TaskDefinitionResponse[]`.
+- Errors: `502`.
+
+### `GET /task-definitions/{task_definition_id}`
+- Description: Get task definition by UUID.
+- Response `200`: `TaskDefinitionResponse`.
+- Errors: `404`, `502`.
+
+### `PUT /task-definitions/{task_definition_id}`
+- Description: Update task definition name.
+- Request body:
+```json
+{
+  "name": "Updated name"
+}
+```
+- Response `200`: `TaskDefinitionResponse`.
+- Errors: `400`, `404`, `409`, `502`.
+
+### `DELETE /task-definitions/{task_definition_id}`
+- Description: Delete task definition.
+- Response `204`: empty body.
+- Errors: `404`, `409`, `502`.
+
+## Patient Tasks
+
+### `POST /patients/{patient_id}/tasks`
+- Description: Assign a task definition to a patient. Triggers automatic schedule replan.
+- Path params:
+  - `patient_id` (external string ID)
+- Request body:
+```json
+{
+  "task_definition_id": "uuid",
+  "due_at": "2026-02-21T15:00:00Z",
+  "status": "pending"
+}
+```
+- Response `201` (`PatientTaskResponse`):
+```json
+{
+  "id": "uuid",
+  "patient_id": "uuid",
+  "patient_external_id": "P-001",
+  "task_definition_id": "uuid",
+  "task_name": "Blood test",
+  "status": "pending",
+  "due_at": "2026-02-21T15:00:00+00:00",
+  "created_at": "2026-02-21T09:00:00+00:00",
+  "updated_at": "2026-02-21T09:00:00+00:00"
+}
+```
+- Errors: `400`, `404`, `409`, `502`.
+
+### `GET /patients/{patient_id}/tasks`
+- Description: List tasks for one patient.
+- Path params:
+  - `patient_id` (external string ID)
+- Query params:
+  - `status` (optional): `pending | done | cancelled`
+  - Default: `pending`
+- Response `200`: `PatientTaskResponse[]`.
+- Errors: `404`, `502`.
+
+### `PATCH /patient-tasks/{patient_task_id}`
+- Description: Update patient task status and/or due date. Triggers automatic schedule replan.
+- Path params:
+  - `patient_task_id` (UUID)
+- Request body (at least one field):
+```json
+{
+  "status": "done",
+  "due_at": "2026-02-21T16:00:00Z"
+}
+```
+- Response `200`: `PatientTaskResponse`.
+- Errors: `400`, `404`, `502`.
+
+## Schedule
+
+`POST /schedule` and `GET /schedule` share the same response model:
+```json
+{
+  "items": [
+    {
+      "schedule_item_id": "uuid",
+      "task_name": "Blood test",
+      "patient_name": "Elena Ruiz",
+      "day": "2026-02-21",
+      "hour": 9,
+      "priority_score": 41.5,
+      "reason": "Time-sensitive lab order"
+    }
+  ]
+}
+```
+
+### `POST /schedule`
+- Description: Recompute and synchronize schedule from all pending patient tasks.
+- Request body: none.
+- Response `200`: `SchedulePlanResponse`.
+- Errors: `400`, `404`, `502`.
+
+### `GET /schedule`
+- Description: Return current planned schedule in the same shape as `POST /schedule`.
+- Request body: none.
+- Response `200`: `SchedulePlanResponse`.
+- Errors: `502`.
+
+### `GET /schedule/day/{day}`
+- Description: Return schedule for one day.
+- Path params:
+  - `day` (date, format `YYYY-MM-DD`)
+- Response `200`: `SchedulePlanResponse`.
+- Errors: `502`.
+
+### `GET /schedule/{patient_id}`
+- Description: Return schedule for one patient (external `patient_id`).
+- Path params:
+  - `patient_id` (string)
+- Response `200`: `SchedulePlanResponse`.
+- Errors: `404`, `502`.
+
+### `DELETE /schedule/{schedule_item_id}`
+- Description:
+1. Fetch schedule item.
+2. Cancel source `patient_task` (if linked).
+3. Delete schedule item.
+4. Trigger automatic replan.
+- Path params:
+  - `schedule_item_id` (UUID)
+- Response `204`: empty body.
+- Errors: `400`, `404`, `502`.
