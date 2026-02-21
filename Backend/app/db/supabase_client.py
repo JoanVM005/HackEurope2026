@@ -106,17 +106,28 @@ class SupabaseRepository:
         return "foreign key" in str(exc).lower()
 
     def _parse_patient_task_row(self, row: dict[str, Any]) -> PatientTaskResponse:
-        payload = dict(row)
-        task_definition = self._as_single_relation(payload.pop("task_definitions", None))
-        patient_info = self._as_single_relation(payload.pop("patients", None))
+        raw = dict(row)
+        task_definition = self._as_single_relation(raw.get("task_definitions"))
+        patient_info = self._as_single_relation(raw.get("patients"))
 
-        payload["task_name"] = task_definition.get("name") if task_definition else payload.get("task_name")
-        payload["patient_external_id"] = (
-            patient_info.get("patient_id") if patient_info else payload.get("patient_external_id")
-        )
-
-        if not payload.get("task_name"):
+        task_name = task_definition.get("name") if task_definition else raw.get("task_name")
+        if not task_name:
             raise UpstreamServiceError("Missing task definition name in patient task response")
+
+        # Keep only fields expected by PatientTaskResponse.
+        payload = {
+            "id": raw.get("id"),
+            "patient_id": raw.get("patient_id"),
+            "patient_external_id": (
+                patient_info.get("patient_id") if patient_info else raw.get("patient_external_id")
+            ),
+            "task_definition_id": raw.get("task_definition_id"),
+            "task_name": task_name,
+            "status": raw.get("status"),
+            "due_at": raw.get("due_at"),
+            "created_at": raw.get("created_at"),
+            "updated_at": raw.get("updated_at"),
+        }
 
         return PatientTaskResponse.model_validate(payload)
 
@@ -223,7 +234,7 @@ class SupabaseRepository:
             raise NotFoundError("Patient task not found")
         return self._parse_patient_task_row(row)
 
-    def get_patient_by_external_id(self, patient_external_id: str) -> PatientResponse:
+    def get_patient_by_external_id(self, patient_external_id: int) -> PatientResponse:
         response = self._execute(
             self._client.table("patients").select("*").eq("patient_id", patient_external_id).limit(1)
         )
@@ -234,8 +245,8 @@ class SupabaseRepository:
 
     def get_patients_by_external_ids(
         self,
-        patient_external_ids: list[str],
-    ) -> dict[str, PatientResponse]:
+        patient_external_ids: list[int],
+    ) -> dict[int, PatientResponse]:
         if not patient_external_ids:
             return {}
 
@@ -269,7 +280,7 @@ class SupabaseRepository:
             raise UpstreamServiceError("Failed to create patient")
         return PatientResponse.model_validate(row)
 
-    def update_patient(self, patient_external_id: str, payload: PatientUpdate) -> PatientResponse:
+    def update_patient(self, patient_external_id: int, payload: PatientUpdate) -> PatientResponse:
         body = payload.model_dump(exclude_unset=True, mode="json")
         if not body:
             raise ValidationError("At least one field must be provided")
@@ -282,7 +293,7 @@ class SupabaseRepository:
         )
         return self.get_patient_by_external_id(patient_external_id)
 
-    def delete_patient(self, patient_external_id: str) -> None:
+    def delete_patient(self, patient_external_id: int) -> None:
         self.get_patient_by_external_id(patient_external_id)
         self._execute_mutation(
             self._client.table("patients").delete().eq("patient_id", patient_external_id)
@@ -379,7 +390,7 @@ class SupabaseRepository:
 
     def create_patient_task(
         self,
-        patient_external_id: str,
+        patient_external_id: int,
         payload: PatientTaskAssignCreate,
     ) -> PatientTaskResponse:
         patient = self.get_patient_by_external_id(patient_external_id)
@@ -411,7 +422,7 @@ class SupabaseRepository:
 
     def list_patient_tasks(
         self,
-        patient_external_id: str,
+        patient_external_id: int,
         status: TaskStatus | None = TaskStatus.pending,
     ) -> list[PatientTaskResponse]:
         patient = self.get_patient_by_external_id(patient_external_id)
@@ -586,7 +597,7 @@ class SupabaseRepository:
 
     def list_schedule_plan_items(
         self,
-        patient_external_id: str | None = None,
+        patient_external_id: int | None = None,
         schedule_day: date | None = None,
     ) -> list[PlannedScheduleItem]:
         patient_internal_id: str | None = None

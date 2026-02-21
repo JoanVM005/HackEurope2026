@@ -37,7 +37,7 @@ def get_planner_service(
     status_code=status.HTTP_201_CREATED,
 )
 def assign_task_to_patient(
-    patient_id: str,
+    patient_id: int,
     payload: PatientTaskAssignCreate,
     repository: SupabaseRepository = Depends(get_repository),
     planner_service: PlannerService = Depends(get_planner_service),
@@ -60,7 +60,7 @@ def assign_task_to_patient(
 
 @router.get("/patients/{patient_id}/tasks", response_model=list[PatientTaskResponse])
 def list_tasks_for_patient(
-    patient_id: str,
+    patient_id: int,
     status_filter: TaskStatus = Query(default=TaskStatus.pending, alias="status"),
     repository: SupabaseRepository = Depends(get_repository),
 ) -> list[PatientTaskResponse]:

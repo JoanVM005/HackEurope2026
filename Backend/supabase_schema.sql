@@ -19,7 +19,7 @@ $$;
 -- -------------------------
 create table if not exists public.patients (
   id uuid primary key default gen_random_uuid(),
-  patient_id text not null unique,
+  patient_id int not null unique,
   first_name text not null,
   last_name text not null,
   description text not null,

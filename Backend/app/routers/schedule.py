@@ -68,7 +68,7 @@ def list_schedule_by_day(
 
 @router.get("/{patient_id}", response_model=SchedulePlanResponse)
 def list_schedule_by_patient(
-    patient_id: str,
+    patient_id: int,
     repository: SupabaseRepository = Depends(get_repository),
 ) -> SchedulePlanResponse:
     try:

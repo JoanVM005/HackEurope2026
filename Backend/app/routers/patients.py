@@ -42,7 +42,7 @@ def list_patients(
 
 @router.get("/patients/{patient_id}", response_model=PatientResponse)
 def get_patient(
-    patient_id: str,
+    patient_id: int,
     repository: SupabaseRepository = Depends(get_repository),
 ) -> PatientResponse:
     try:
@@ -55,7 +55,7 @@ def get_patient(
 
 @router.put("/patients/{patient_id}", response_model=PatientResponse)
 def update_patient(
-    patient_id: str,
+    patient_id: int,
     payload: PatientUpdate,
     repository: SupabaseRepository = Depends(get_repository),
 ) -> PatientResponse:
@@ -71,7 +71,7 @@ def update_patient(
 
 @router.delete("/patients/{patient_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_patient(
-    patient_id: str,
+    patient_id: int,
     repository: SupabaseRepository = Depends(get_repository),
 ) -> None:
     try:
