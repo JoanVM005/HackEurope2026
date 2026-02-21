@@ -1,5 +1,5 @@
 :root {
-  font-family: "Avenir Next", "Nunito Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif, 'Manrope';
+  font-family: 'Manrope', 'Avenir Next', 'Nunito Sans', 'Segoe UI', sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -21,14 +21,12 @@
 html,
 body,
 #root {
+  margin: 0;
   width: 100%;
   min-height: 100%;
 }
 
 body {
-  margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  color: #0f2745;
-  background: #f3f7fb;
 }

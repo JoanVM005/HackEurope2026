@@ -8,6 +8,7 @@ export type Clinician = {
 
 type ScheduleGridProps = {
   clinicians?: Clinician[];
+  onConfigurePatients?: () => void;
 };
 
 const defaultClinicians: Clinician[] = [
@@ -41,7 +42,7 @@ const timeSlots = [
   "16:30",
 ];
 
-export function ScheduleGrid({ clinicians = defaultClinicians }: ScheduleGridProps) {
+export function ScheduleGrid({ clinicians = defaultClinicians, onConfigurePatients }: ScheduleGridProps) {
   const activeClinicians = clinicians.length > 0 ? clinicians : defaultClinicians;
   const columnWidthRem = 10;
   const timeColumnWidthRem = 8.5;
@@ -58,6 +59,11 @@ export function ScheduleGrid({ clinicians = defaultClinicians }: ScheduleGridPro
         </div>
         <div className="schedule-actions">
           <span className="clinician-count">{activeClinicians.length} clinicians</span>
+          {onConfigurePatients ? (
+            <button type="button" className="page-action-btn page-action-btn--secondary" onClick={onConfigurePatients}>
+              Configure patients
+            </button>
+          ) : null}
           <button type="button" className="schedule-cta">
             Run AI Schedule
           </button>

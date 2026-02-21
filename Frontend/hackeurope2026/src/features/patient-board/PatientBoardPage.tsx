@@ -12,7 +12,11 @@ const emptyChecklist = (): TestChecklist => ({
   Physio: false,
 })
 
-export default function PatientBoardPage() {
+interface PatientBoardPageProps {
+  onCreateSchedule?: () => void
+}
+
+export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageProps) {
   const [patients, setPatients] = useState<PatientCardData[]>(mockPatients)
   const [newPatientName, setNewPatientName] = useState('')
   const [newPatientTests, setNewPatientTests] = useState<TestChecklist>(emptyChecklist)
@@ -77,6 +81,13 @@ export default function PatientBoardPage() {
         <p className="patient-board__subtitle">
           Add patients, tick required tests, and let the AI handle scheduling and order-of-execution in the background.
         </p>
+        {onCreateSchedule ? (
+          <div className="patient-board__top-actions">
+            <button type="button" className="page-action-btn" onClick={onCreateSchedule}>
+              Create schedule
+            </button>
+          </div>
+        ) : null}
 
         <form
           className="patient-board__composer"

@@ -1,4 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
 .app-shell {
+  --brand-blue-900: #134787;
+  --brand-blue-700: #1f5fa4;
+  --brand-blue-500: #4f90cd;
+  --brand-blue-200: #d8e8f8;
+  --surface: #f3f7fb;
+  --ink: #0f2745;
+  --muted: #4b647f;
+
   min-height: 100vh;
-  padding: 0;
+  width: 100%;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 85% -10%, rgb(79 144 205 / 18%), transparent 40%),
+    radial-gradient(circle at -10% 100%, rgb(31 95 164 / 15%), transparent 45%),
+    var(--surface);
+}
+
+.app-shell--landing {
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.landing {
+  display: grid;
+  place-items: center;
+}
+
+.page-action-btn {
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--brand-blue-700), #2d74bd);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.98rem;
+  line-height: 1;
+  padding: 0.78rem 1.15rem;
+  cursor: pointer;
+  transition: filter 140ms ease;
+}
+
+.page-action-btn:hover {
+  filter: brightness(1.05);
+}
+
+.page-action-btn--secondary {
+  background: #ffffff;
+  color: var(--brand-blue-700);
+  border: 1px solid var(--brand-blue-200);
 }
