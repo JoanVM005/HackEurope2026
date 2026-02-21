@@ -103,7 +103,7 @@ class PlannerService:
         )
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
-    def _build_contexts(self) -> dict[str, PlannerPatientContext]:
+    def _build_contexts(self) -> dict[int, PlannerPatientContext]:
         patients = self._repository.list_patients()
         if not patients:
             return {}
@@ -112,7 +112,7 @@ class PlannerService:
             [patient.id for patient in patients]
         )
 
-        contexts: dict[str, PlannerPatientContext] = {}
+        contexts: dict[int, PlannerPatientContext] = {}
         for patient in patients:
             tasks = pending_tasks_by_patient.get(str(patient.id), [])
             if not tasks:

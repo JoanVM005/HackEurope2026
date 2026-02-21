@@ -1,77 +1,151 @@
-import { useState } from 'react'
-import { mockPatients } from './mockPatients'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PatientCard } from './PatientCard'
-import { TEST_TYPES } from './types'
-import type { PatientCardData, TestChecklist, TestType } from './types'
+import { PatientDetailsPopup } from './PatientDetailsPopup'
+import {
+  createPatient,
+  createPatientTask,
+  deletePatient,
+  listPatients,
+  listTaskDefinitions,
+  toIsoFromDatetimeLocal,
+} from './patientBoardApi'
+import type { PatientCardData, TaskDefinitionData } from './types'
 import './patientBoard.css'
-
-const emptyChecklist = (): TestChecklist => ({
-  Bloods: false,
-  CAT: false,
-  MRI: false,
-  Physio: false,
-})
 
 interface PatientBoardPageProps {
   onCreateSchedule?: () => void
 }
 
 export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageProps) {
-  const [patients, setPatients] = useState<PatientCardData[]>(mockPatients)
-  const [newPatientName, setNewPatientName] = useState('')
-  const [newPatientTests, setNewPatientTests] = useState<TestChecklist>(emptyChecklist)
+  const [patients, setPatients] = useState<PatientCardData[]>([])
+  const [taskDefinitions, setTaskDefinitions] = useState<TaskDefinitionData[]>([])
+  const [newPatientNumericId, setNewPatientNumericId] = useState('')
+  const [newPatientFirstName, setNewPatientFirstName] = useState('')
+  const [newPatientLastName, setNewPatientLastName] = useState('')
+  const [newPatientDescription, setNewPatientDescription] = useState('')
+  const [newPatientAdmissionTimestamp, setNewPatientAdmissionTimestamp] = useState('')
+  const [newPatientTaskSelection, setNewPatientTaskSelection] = useState<Record<string, boolean>>({})
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCreatingPatient, setIsCreatingPatient] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null)
 
-  const addPatient = () => {
-    const trimmedName = newPatientName.trim()
-    if (!trimmedName) return
+  const selectedPatient = useMemo(
+    () => patients.find((patient) => patient.id === selectedPatientId) ?? null,
+    [patients, selectedPatientId],
+  )
 
-    const nextPatient: PatientCardData = {
-      id: `pat-${crypto.randomUUID()}`,
-      name: trimmedName,
-      tests: newPatientTests,
+  const loadData = useCallback(async () => {
+    setIsLoading(true)
+    setErrorMessage(null)
+    try {
+      const [loadedPatients, loadedTaskDefinitions] = await Promise.all([listPatients(), listTaskDefinitions()])
+      setPatients(loadedPatients)
+      setTaskDefinitions(loadedTaskDefinitions)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load patients data.'
+      setErrorMessage(message)
+    } finally {
+      setIsLoading(false)
     }
+  }, [])
 
-    setPatients((current) => [nextPatient, ...current])
-    setNewPatientName('')
-    setNewPatientTests(emptyChecklist())
+  useEffect(() => {
+    void loadData()
+  }, [loadData])
+
+  const addPatient = async () => {
+    if (isCreatingPatient) return
+
+    const parsedPatientId = Number.parseInt(newPatientNumericId, 10)
+    const trimmedFirstName = newPatientFirstName.trim()
+    const trimmedLastName = newPatientLastName.trim()
+    const trimmedDescription = newPatientDescription.trim()
+    const admittedAt = toIsoFromDatetimeLocal(newPatientAdmissionTimestamp)
+    const hasIdConflict = patients.some((patient) => patient.patientId === parsedPatientId)
+
+    if (!Number.isInteger(parsedPatientId) || parsedPatientId < 0) return
+    if (!trimmedFirstName || !trimmedLastName || !trimmedDescription || !admittedAt) return
+    if (hasIdConflict) return
+
+    setErrorMessage(null)
+    setNoticeMessage(null)
+    setIsCreatingPatient(true)
+
+    try {
+      const createdPatient = await createPatient({
+        patient_id: String(parsedPatientId),
+        first_name: trimmedFirstName,
+        last_name: trimmedLastName,
+        description: trimmedDescription,
+        admitted_at: admittedAt,
+      })
+
+      const selectedTaskDefinitions = taskDefinitions.filter((taskDefinition) => newPatientTaskSelection[taskDefinition.id])
+      const results = await Promise.allSettled(
+        selectedTaskDefinitions.map((taskDefinition) =>
+          createPatientTask(createdPatient.externalPatientId, {
+            task_definition_id: taskDefinition.id,
+            status: 'pending',
+          }),
+        ),
+      )
+
+      const failedTaskNames = results
+        .map((result, index) => ({ result, name: selectedTaskDefinitions[index].name }))
+        .filter((item) => item.result.status === 'rejected')
+        .map((item) => item.name)
+
+      if (failedTaskNames.length > 0) {
+        setNoticeMessage(`Patient created, but some tasks failed: ${failedTaskNames.join(', ')}`)
+      } else {
+        setNoticeMessage('Patient created successfully.')
+      }
+
+      await loadData()
+      setNewPatientTaskSelection({})
+      setNewPatientNumericId('')
+      setNewPatientFirstName('')
+      setNewPatientLastName('')
+      setNewPatientDescription('')
+      setNewPatientAdmissionTimestamp('')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create patient.'
+      setErrorMessage(message)
+    } finally {
+      setIsCreatingPatient(false)
+    }
   }
 
-  const renamePatient = (patientId: string, nextName: string) => {
-    setPatients((current) =>
-      current.map((patient) => {
-        if (patient.id !== patientId) return patient
-        return {
-          ...patient,
-          name: nextName,
-        }
-      }),
-    )
-  }
-
-  const togglePatientTest = (patientId: string, test: TestType) => {
-    setPatients((current) =>
-      current.map((patient) => {
-        if (patient.id !== patientId) return patient
-        return {
-          ...patient,
-          tests: {
-            ...patient.tests,
-            [test]: !patient.tests[test],
-          },
-        }
-      }),
-    )
-  }
-
-  const toggleNewPatientTest = (test: TestType) => {
-    setNewPatientTests((current) => ({
+  const toggleNewPatientTask = (taskDefinitionId: string) => {
+    setNewPatientTaskSelection((current) => ({
       ...current,
-      [test]: !current[test],
+      [taskDefinitionId]: !current[taskDefinitionId],
     }))
   }
 
-  const deletePatient = (patientId: string) => {
-    setPatients((current) => current.filter((patient) => patient.id !== patientId))
+  const handleDeletePatient = async (patientExternalId: string) => {
+    try {
+      await deletePatient(patientExternalId)
+      await loadData()
+      setSelectedPatientId(null)
+      setNoticeMessage('Patient deleted successfully.')
+      setErrorMessage(null)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete patient.'
+      setErrorMessage(message)
+    }
+  }
+
+  const handleSavedFromPopup = async (warningMessage?: string) => {
+    await loadData()
+    if (warningMessage) {
+      setNoticeMessage(warningMessage)
+    } else {
+      setNoticeMessage('Patient updated successfully.')
+    }
+    setErrorMessage(null)
   }
 
   return (
@@ -79,8 +153,10 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
       <header className="patient-board__hero">
         <h1>Today's Patient Queue</h1>
         <p className="patient-board__subtitle">
-          Add patients, tick required tests, and let the AI handle scheduling and order-of-execution in the background.
+          Add patients, capture admission context and timestamp, then open each patient card for detailed edits.
         </p>
+        {errorMessage ? <p className="patient-board__feedback patient-board__feedback--error">{errorMessage}</p> : null}
+        {noticeMessage ? <p className="patient-board__feedback patient-board__feedback--notice">{noticeMessage}</p> : null}
         {onCreateSchedule ? (
           <div className="patient-board__top-actions">
             <button type="button" className="page-action-btn" onClick={onCreateSchedule}>
@@ -97,51 +173,102 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
           }}
         >
           <label className="patient-board__input-wrap">
-            <span>Patient name</span>
+            <span>Patient ID</span>
+            <input
+              type="number"
+              min={0}
+              value={newPatientNumericId}
+              onChange={(event) => setNewPatientNumericId(event.target.value)}
+              placeholder="e.g. 1051"
+            />
+          </label>
+
+          <label className="patient-board__input-wrap">
+            <span>First name</span>
             <input
               type="text"
-              value={newPatientName}
-              onChange={(event) => setNewPatientName(event.target.value)}
-              placeholder="e.g. Nina Arendt"
+              value={newPatientFirstName}
+              onChange={(event) => setNewPatientFirstName(event.target.value)}
+              placeholder="e.g. Nina"
+            />
+          </label>
+
+          <label className="patient-board__input-wrap">
+            <span>Last name</span>
+            <input
+              type="text"
+              value={newPatientLastName}
+              onChange={(event) => setNewPatientLastName(event.target.value)}
+              placeholder="e.g. Arendt"
+            />
+          </label>
+
+          <label className="patient-board__input-wrap">
+            <span>Admission timestamp</span>
+            <input
+              type="datetime-local"
+              value={newPatientAdmissionTimestamp}
+              onChange={(event) => setNewPatientAdmissionTimestamp(event.target.value)}
+            />
+          </label>
+
+          <label className="patient-board__input-wrap patient-board__input-wrap--description">
+            <span>Description</span>
+            <input
+              type="text"
+              value={newPatientDescription}
+              onChange={(event) => setNewPatientDescription(event.target.value)}
+              placeholder="Reason for patient admission"
             />
           </label>
 
           <fieldset className="patient-board__test-options">
-            <legend>Required tests</legend>
-            {TEST_TYPES.map((testType) => (
-              <label key={testType}>
+            <legend>Required tasks</legend>
+            {taskDefinitions.map((taskDefinition) => (
+              <label key={taskDefinition.id}>
                 <input
                   type="checkbox"
-                  checked={newPatientTests[testType]}
-                  onChange={() => toggleNewPatientTest(testType)}
+                  checked={Boolean(newPatientTaskSelection[taskDefinition.id])}
+                  onChange={() => toggleNewPatientTask(taskDefinition.id)}
                 />
-                <span>{testType}</span>
+                <span>{taskDefinition.name}</span>
               </label>
             ))}
           </fieldset>
 
           <button type="submit" className="patient-board__add-btn">
-            Add patient
+            {isCreatingPatient ? 'Creating...' : 'Add patient'}
           </button>
         </form>
       </header>
 
       <section className="patient-board__grid" aria-label="Patient cards">
-        {patients.length > 0 ? (
-          patients.map((patient) => (
-            <PatientCard
-              key={patient.id}
-              patient={patient}
-              testTypes={TEST_TYPES}
-              onRename={renamePatient}
-              onToggleTest={togglePatientTest}
-              onDelete={deletePatient}
-            />
-          ))
+        {isLoading ? (
+          <p className="patient-board__empty">Loading patients...</p>
+        ) : patients.length > 0 ? (
+          patients.map((patient) => <PatientCard key={patient.id} patient={patient} onOpen={setSelectedPatientId} />)
         ) : (
           <p className="patient-board__empty">No patients yet. Add one above to start today’s list.</p>
         )}
       </section>
+
+      <PatientDetailsPopup
+        open={selectedPatient !== null}
+        patient={selectedPatient}
+        taskDefinitions={taskDefinitions}
+        onSaved={handleSavedFromPopup}
+        onDelete={handleDeletePatient}
+        onClose={() => setSelectedPatientId(null)}
+      />
+
+      {isCreatingPatient ? (
+        <div className="patient-board__loading-overlay" role="status" aria-live="polite">
+          <div className="patient-board__loading-modal">
+            <span className="patient-board__loading-spinner" aria-hidden />
+            <p>Creating patient and syncing tasks...</p>
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }

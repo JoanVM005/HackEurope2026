@@ -1,0 +1,49 @@
+.landing-page {
+  min-height: calc(100vh - 68px);
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.landing-page__card {
+  width: min(100%, 48rem);
+  border: 1px solid color-mix(in srgb, var(--silver) 78%, var(--primary) 22%);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent-cyan) 18%, transparent), transparent 45%),
+    radial-gradient(circle at -2% 100%, color-mix(in srgb, var(--accent-orange) 18%, transparent), transparent 46%),
+    var(--white);
+  box-shadow: 0 16px 32px color-mix(in srgb, var(--primary) 20%, transparent);
+  padding: clamp(1.2rem, 3vw, 2.2rem);
+}
+
+.landing-page__eyebrow {
+  margin: 0 0 0.6rem;
+  color: var(--accent-bronze);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.landing-page__card h1 {
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.05;
+}
+
+.landing-page__card > p {
+  margin: 0.95rem 0 0;
+  color: var(--muted);
+  max-width: 64ch;
+  font-size: clamp(0.95rem, 1.4vw, 1.06rem);
+}
+
+.landing-page__actions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}

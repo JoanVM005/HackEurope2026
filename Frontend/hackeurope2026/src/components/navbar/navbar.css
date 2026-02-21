@@ -1,0 +1,73 @@
+.app-navbar {
+  --navbar-height: 68px;
+
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: var(--navbar-height);
+  padding: 0.75rem clamp(1rem, 3vw, 2.5rem);
+  background: color-mix(in srgb, var(--white) 92%, var(--accent-cyan) 8%);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid color-mix(in srgb, var(--silver) 75%, var(--primary) 25%);
+}
+
+.app-navbar__title {
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.app-navbar__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.app-navbar__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--silver) 75%, var(--primary) 25%);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--muted);
+  text-decoration: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.56rem 0.86rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.app-navbar__link:hover {
+  border-color: var(--accent-blue);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.app-navbar__link--active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--accent-blue) 18%, var(--white) 82%);
+  color: var(--primary);
+}
+
+.app-navbar__link:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .app-navbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

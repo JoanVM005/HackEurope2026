@@ -1,54 +1,53 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 
-.app-shell {
-  --brand-blue-900: #134787;
-  --brand-blue-700: #1f5fa4;
-  --brand-blue-500: #4f90cd;
-  --brand-blue-200: #d8e8f8;
-  --surface: #f3f7fb;
-  --ink: #0f2745;
-  --muted: #4b647f;
+:root {
+  --white: #fefefe;
+  --primary: #1c5089;
+  --ink: #020202;
+  --silver: #bcbcbc;
+  --muted: #797979;
+  --accent-blue: #5184e7;
+  --accent-orange: #e28656;
+  --accent-pink: #e55ebe;
+  --accent-cyan: #52f0fe;
+  --accent-bronze: #4c431c;
 
-  min-height: 100vh;
-  width: 100%;
-  color: var(--ink);
-  background:
-    radial-gradient(circle at 85% -10%, rgb(79 144 205 / 18%), transparent 40%),
-    radial-gradient(circle at -10% 100%, rgb(31 95 164 / 15%), transparent 45%),
-    var(--surface);
-}
-
-.app-shell--landing {
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-}
-
-.landing {
-  display: grid;
-  place-items: center;
+  --brand-blue-900: #1c5089;
+  --brand-blue-700: #1c5089;
+  --brand-blue-500: #5184e7;
+  --brand-blue-200: #bcbcbc;
+  --surface: #fefefe;
 }
 
 .page-action-btn {
-  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 65%, var(--primary) 35%);
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--brand-blue-700), #2d74bd);
-  color: #ffffff;
+  background: linear-gradient(145deg, var(--primary), var(--accent-blue));
+  color: var(--white);
   font: inherit;
   font-weight: 700;
   font-size: 0.98rem;
   line-height: 1;
   padding: 0.78rem 1.15rem;
   cursor: pointer;
+  text-decoration: none;
   transition: filter 140ms ease;
 }
 
 .page-action-btn:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.07);
+}
+
+.page-action-btn:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
 }
 
 .page-action-btn--secondary {
-  background: #ffffff;
-  color: var(--brand-blue-700);
-  border: 1px solid var(--brand-blue-200);
+  background: color-mix(in srgb, var(--white) 84%, var(--accent-cyan) 16%);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 60%, var(--silver) 40%);
 }

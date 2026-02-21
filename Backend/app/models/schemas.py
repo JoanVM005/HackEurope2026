@@ -31,7 +31,7 @@ class TaskStatus(str, Enum):
 
 
 class PatientCreate(BaseSchema):
-    patient_id: str = Field(min_length=1, max_length=100)
+    patient_id: int = Field(ge=1)
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
     description: str = Field(min_length=1, max_length=2000)
@@ -63,7 +63,7 @@ class PatientUpdate(BaseSchema):
 
 class PatientResponse(BaseSchema):
     id: UUID
-    patient_id: str
+    patient_id: int
     first_name: str
     last_name: str
     description: str
@@ -123,7 +123,7 @@ class PatientTaskUpdate(BaseSchema):
 class PatientTaskResponse(BaseSchema):
     id: UUID
     patient_id: UUID
-    patient_external_id: Optional[str] = None
+    patient_external_id: Optional[int] = None
     task_definition_id: UUID
     task_name: str
     status: TaskStatus
@@ -135,7 +135,7 @@ class PatientTaskResponse(BaseSchema):
 class ScheduleItemResponse(BaseSchema):
     id: UUID
     patient_id: UUID
-    patient_external_id: Optional[str] = None
+    patient_external_id: Optional[int] = None
     task_definition_id: Optional[UUID] = None
     source_patient_task_id: Optional[UUID] = None
     task_name: str
@@ -185,7 +185,7 @@ class PlannerTaskContext(BaseSchema):
 
 class PlannerPatientContext(BaseSchema):
     patient_uuid: UUID
-    patient_external_id: str
+    patient_external_id: int
     patient_name: str
     description: str
     admitted_at: Optional[datetime] = None
