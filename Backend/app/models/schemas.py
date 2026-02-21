@@ -35,6 +35,7 @@ class PatientCreate(BaseSchema):
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
     description: str = Field(min_length=1, max_length=2000)
+    time_preferences: Optional[str] = Field(default=None, min_length=1, max_length=1000)
     admitted_at: Optional[datetime] = None
 
     @field_validator("admitted_at", mode="before")
@@ -47,6 +48,7 @@ class PatientUpdate(BaseSchema):
     first_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     last_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, min_length=1, max_length=2000)
+    time_preferences: Optional[str] = Field(default=None, min_length=1, max_length=1000)
     admitted_at: Optional[datetime] = None
 
     @field_validator("admitted_at", mode="before")
@@ -67,6 +69,7 @@ class PatientResponse(BaseSchema):
     first_name: str
     last_name: str
     description: str
+    time_preferences: Optional[str] = None
     admitted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
@@ -188,6 +191,7 @@ class PlannerPatientContext(BaseSchema):
     patient_external_id: int
     patient_name: str
     description: str
+    time_preferences: Optional[str] = None
     admitted_at: Optional[datetime] = None
     tasks: list[PlannerTaskContext] = Field(default_factory=list)
 
