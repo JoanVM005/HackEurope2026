@@ -23,6 +23,7 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
   const [newPatientFirstName, setNewPatientFirstName] = useState('')
   const [newPatientLastName, setNewPatientLastName] = useState('')
   const [newPatientDescription, setNewPatientDescription] = useState('')
+  const [newPatientTimePreferences, setNewPatientTimePreferences] = useState('')
   const [newPatientAdmissionTimestamp, setNewPatientAdmissionTimestamp] = useState('')
   const [newPatientTaskSelection, setNewPatientTaskSelection] = useState<Record<string, boolean>>({})
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
@@ -62,6 +63,7 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
     const trimmedFirstName = newPatientFirstName.trim()
     const trimmedLastName = newPatientLastName.trim()
     const trimmedDescription = newPatientDescription.trim()
+    const trimmedTimePreferences = newPatientTimePreferences.trim()
     const admittedAt = toIsoFromDatetimeLocal(newPatientAdmissionTimestamp)
     const hasIdConflict = patients.some((patient) => patient.patientId === parsedPatientId)
 
@@ -79,6 +81,7 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
         first_name: trimmedFirstName,
         last_name: trimmedLastName,
         description: trimmedDescription,
+        time_preferences: trimmedTimePreferences || null,
         admitted_at: admittedAt,
       })
 
@@ -109,6 +112,7 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
       setNewPatientFirstName('')
       setNewPatientLastName('')
       setNewPatientDescription('')
+      setNewPatientTimePreferences('')
       setNewPatientAdmissionTimestamp('')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create patient.'
@@ -219,6 +223,15 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
               value={newPatientDescription}
               onChange={(event) => setNewPatientDescription(event.target.value)}
               placeholder="Reason for patient admission"
+            />
+          </label>
+          <label className="patient-board__input-wrap patient-board__input-wrap--preferences">
+            <span>Time preferences</span>
+            <input
+              type="text"
+              value={newPatientTimePreferences}
+              onChange={(event) => setNewPatientTimePreferences(event.target.value)}
+              placeholder="e.g. prefers mornings, avoid late afternoons"
             />
           </label>
 
