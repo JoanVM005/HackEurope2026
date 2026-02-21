@@ -1,7 +1,16 @@
 import "./ScheduleGrid.css";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { DEFAULT_CLINICIANS } from "../types/clinician";
 import type { Clinician } from "../types/clinician";
+import {
+  deleteScheduleItem,
+  listSchedule,
+  listScheduleByDay,
+  listScheduleByPatient,
+  replanSchedule,
+  type ScheduleItem,
+} from "./scheduleApi";
 
 type ScheduleGridProps = {
   clinicians?: Clinician[];
@@ -17,11 +26,134 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
   const activeClinicians = clinicians.length > 0 ? clinicians : DEFAULT_CLINICIANS;
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
+  const [filterMode, setFilterMode] = useState<"all" | "day" | "patient">("all");
+  const [dayFilter, setDayFilter] = useState(() => new Date().toISOString().slice(0, 10));
+  const [patientFilter, setPatientFilter] = useState("");
+  const [items, setItems] = useState<ScheduleItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isReplanning, setIsReplanning] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
   const timeSlots = useMemo(() => createTimeSlots(startTime, endTime), [startTime, endTime]);
   const columnWidthRem = 10;
   const timeColumnWidthRem = 8.5;
   const clinicianCount = Math.max(activeClinicians.length, 1);
   const minGridWidthRem = timeColumnWidthRem + clinicianCount * columnWidthRem;
+  const { slotAssignments, overflowCount } = useMemo(() => {
+    const assignments = new Map<string, ScheduleItem[]>();
+    const slotPatients = new Map<string, Set<string>>();
+    const sorted = [...items].sort((a, b) => a.hour - b.hour || b.priorityScore - a.priorityScore);
+
+    for (const slot of timeSlots) {
+      assignments.set(slot, []);
+      slotPatients.set(slot, new Set());
+    }
+
+    if (timeSlots.length === 0 || clinicianCount <= 0) {
+      return {
+        slotAssignments: assignments,
+        overflowCount: sorted.length,
+      };
+    }
+
+    const clinicStartMinutes = minutesFromTime(startTime);
+    let unableToPlace = 0;
+
+    for (const item of sorted) {
+      const preferredMinutes = item.hour * 60;
+      const preferredIndex = Math.min(
+        Math.max(Math.floor((preferredMinutes - clinicStartMinutes) / STEP_MINUTES), 0),
+        timeSlots.length - 1,
+      );
+
+      let placed = false;
+      for (let offset = 0; offset < timeSlots.length; offset += 1) {
+        const slotIndex = (preferredIndex + offset) % timeSlots.length;
+        const slot = timeSlots[slotIndex];
+        const slotItems = assignments.get(slot);
+        const slotPatientKeys = slotPatients.get(slot);
+        const patientKey = normalizePatientKey(item.patientName);
+
+        if (!slotItems || !slotPatientKeys) continue;
+        if (slotItems.length >= clinicianCount) continue;
+        if (slotPatientKeys.has(patientKey)) continue;
+
+        slotItems.push(item);
+        slotPatientKeys.add(patientKey);
+        placed = true;
+        break;
+      }
+
+      if (!placed) unableToPlace += 1;
+    }
+
+    return {
+      slotAssignments: assignments,
+      overflowCount: unableToPlace,
+    };
+  }, [clinicianCount, items, startTime, timeSlots]);
+
+  const loadSchedule = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      const scheduleItems =
+        filterMode === "day"
+          ? await listScheduleByDay(dayFilter)
+          : filterMode === "patient"
+            ? await listScheduleByPatient(patientFilter.trim())
+            : await listSchedule();
+      setItems(scheduleItems);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to load schedule.";
+      setErrorMessage(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dayFilter, filterMode, patientFilter]);
+
+  useEffect(() => {
+    if (filterMode === "patient" && !patientFilter.trim()) {
+      setItems([]);
+      setIsLoading(false);
+      return;
+    }
+
+    void loadSchedule();
+  }, [filterMode, patientFilter, loadSchedule]);
+
+  const handleReplan = async () => {
+    if (isReplanning) return;
+
+    setIsReplanning(true);
+    setErrorMessage(null);
+    setNoticeMessage(null);
+
+    try {
+      const updatedItems = await replanSchedule();
+      setItems(updatedItems);
+      setNoticeMessage("Schedule replanned successfully.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to run planner.";
+      setErrorMessage(message);
+    } finally {
+      setIsReplanning(false);
+    }
+  };
+
+  const handleDelete = async (scheduleItemId: string) => {
+    setErrorMessage(null);
+    setNoticeMessage(null);
+
+    try {
+      await deleteScheduleItem(scheduleItemId);
+      await loadSchedule();
+      setNoticeMessage("Schedule item removed and plan refreshed.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete schedule item.";
+      setErrorMessage(message);
+    }
+  };
 
   return (
     <section className="schedule" aria-label="Clinician timetable">
@@ -29,7 +161,8 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
         <div>
           <h1>Today's Timetable</h1>
           <p>
-            Times on the left, clinicians across the top. Select cells later to place patients into matching slots.
+            Times on the left, clinicians across the top. Changing clinic hours automatically reflows appointments into
+            available slots.
           </p>
           <div className="time-controls" aria-label="Clinic hours">
             <label className="time-control">
@@ -71,6 +204,41 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
               />
             </label>
           </div>
+          <div className="schedule-filters" aria-label="Schedule filters">
+            <label className="schedule-filter">
+              <span>View</span>
+              <select value={filterMode} onChange={(event) => setFilterMode(event.target.value as "all" | "day" | "patient")}>
+                <option value="all">All</option>
+                <option value="day">By day</option>
+                <option value="patient">By patient</option>
+              </select>
+            </label>
+            {filterMode === "day" ? (
+              <label className="schedule-filter">
+                <span>Day</span>
+                <input type="date" value={dayFilter} onChange={(event) => setDayFilter(event.target.value)} />
+              </label>
+            ) : null}
+            {filterMode === "patient" ? (
+              <label className="schedule-filter">
+                <span>Patient ID</span>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 1001"
+                  value={patientFilter}
+                  onChange={(event) => setPatientFilter(event.target.value)}
+                />
+              </label>
+            ) : null}
+          </div>
+          {errorMessage ? <p className="schedule-feedback schedule-feedback--error">{errorMessage}</p> : null}
+          {noticeMessage ? <p className="schedule-feedback schedule-feedback--notice">{noticeMessage}</p> : null}
+          {overflowCount > 0 ? (
+            <p className="schedule-feedback schedule-feedback--warn">
+              {overflowCount} appointment{overflowCount > 1 ? "s" : ""} could not fit in the selected clinic hours.
+            </p>
+          ) : null}
         </div>
         <div className="schedule-actions">
           <span className="clinician-count">{activeClinicians.length} clinicians</span>
@@ -79,8 +247,8 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
               Configure patients
             </button>
           ) : null}
-          <button type="button" className="schedule-cta">
-            Run AI Schedule
+          <button type="button" className="schedule-cta" onClick={handleReplan} disabled={isReplanning}>
+            {isReplanning ? "Running..." : "Run AI Schedule"}
           </button>
         </div>
       </header>
@@ -108,9 +276,31 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
             </div>
           )}
 
-          {timeSlots.map((slot) => (
-            <Row key={slot} slot={slot} clinicians={activeClinicians} />
-          ))}
+          {isLoading ? (
+            <>
+              <div className="time-cell">--:--</div>
+              <div className="slot-cell slot-cell--disabled schedule-state" style={{ gridColumn: `span ${clinicianCount}` }}>
+                Loading schedule...
+              </div>
+            </>
+          ) : timeSlots.length > 0 ? (
+            timeSlots.map((slot) => (
+              <Row
+                key={slot}
+                slot={slot}
+                clinicians={activeClinicians}
+                itemsForSlot={slotAssignments.get(slot) ?? []}
+                onDelete={handleDelete}
+              />
+            ))
+          ) : (
+            <>
+              <div className="time-cell">--:--</div>
+              <div className="slot-cell slot-cell--disabled schedule-state" style={{ gridColumn: `span ${clinicianCount}` }}>
+                No time slots in selected range.
+              </div>
+            </>
+          )}
         </div>
       </div>
     </section>
@@ -146,21 +336,56 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function Row({ slot, clinicians }: { slot: string; clinicians: Clinician[] }) {
+function Row({
+  slot,
+  clinicians,
+  itemsForSlot,
+  onDelete,
+}: {
+  slot: string;
+  clinicians: Clinician[];
+  itemsForSlot: ScheduleItem[];
+  onDelete: (scheduleItemId: string) => void;
+}) {
   return (
     <>
       <div className="time-cell">{slot}</div>
       {clinicians.length > 0 ? (
-        clinicians.map((clinician) => (
-          <button
-            key={`${slot}-${clinician.id}`}
-            type="button"
-            className="slot-cell"
-            aria-label={`Empty slot at ${slot} for ${clinician.name}`}
-          >
-            <span>Open slot</span>
-          </button>
-        ))
+        clinicians.map((clinician, index) => {
+          const item = itemsForSlot[index];
+          const patientTone = item ? patientToneFor(item.patientName) : null;
+          const cardStyle = patientTone
+            ? ({
+                "--patient-accent": patientTone.accent,
+                "--patient-surface": patientTone.surface,
+                "--patient-border": patientTone.border,
+              } as CSSProperties)
+            : undefined;
+
+          return (
+            <div key={`${slot}-${clinician.id}`} className={`slot-cell ${item ? "slot-cell--filled" : ""}`}>
+              {item ? (
+                <article className="schedule-card" style={cardStyle}>
+                  <strong>{item.taskName}</strong>
+                  <span>{item.patientName}</span>
+                  <span className="schedule-card__meta">Priority {item.priorityScore.toFixed(1)}</span>
+                  <span className="schedule-card__meta">Original {formatHour(item.hour)}</span>
+                  <p>{item.reason}</p>
+                  <button
+                    type="button"
+                    className="schedule-card__remove"
+                    onClick={() => onDelete(item.scheduleItemId)}
+                    aria-label={`Remove ${item.taskName} for ${item.patientName}`}
+                  >
+                    Remove
+                  </button>
+                </article>
+              ) : (
+                <span>Open slot</span>
+              )}
+            </div>
+          );
+        })
       ) : (
         <button type="button" className="slot-cell slot-cell--disabled" disabled aria-label={`No clinician at ${slot}`}>
           <span>Add clinician</span>
@@ -168,4 +393,37 @@ function Row({ slot, clinicians }: { slot: string; clinicians: Clinician[] }) {
       )}
     </>
   );
+}
+
+function formatHour(hour: number): string {
+  return `${hour.toString().padStart(2, "0")}:00`;
+}
+
+function normalizePatientKey(patientName: string): string {
+  return patientName.trim().toLowerCase();
+}
+
+type PatientTone = {
+  accent: string;
+  surface: string;
+  border: string;
+};
+
+const PATIENT_TONES: PatientTone[] = [
+  { accent: "#b42318", surface: "#fff2f0", border: "#f9c8c1" },
+  { accent: "#b54708", surface: "#fff6eb", border: "#f7d6ae" },
+  { accent: "#1f7a3d", surface: "#effaf1", border: "#c2e9cb" },
+  { accent: "#0f6cbd", surface: "#eff6ff", border: "#c6ddff" },
+  { accent: "#6e49cb", surface: "#f4f0ff", border: "#d8caf8" },
+  { accent: "#ad2454", surface: "#fff0f6", border: "#f6c7dc" },
+  { accent: "#007a7a", surface: "#edfbfb", border: "#c2ebeb" },
+  { accent: "#6a4c1e", surface: "#faf5ee", border: "#e8d9c1" },
+];
+
+function patientToneFor(patientName: string): PatientTone {
+  let hash = 0;
+  for (let i = 0; i < patientName.length; i += 1) {
+    hash = (hash * 31 + patientName.charCodeAt(i)) >>> 0;
+  }
+  return PATIENT_TONES[hash % PATIENT_TONES.length];
 }

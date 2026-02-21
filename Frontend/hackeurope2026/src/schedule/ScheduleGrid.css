@@ -43,6 +43,58 @@
   gap: 0.75rem;
 }
 
+.schedule-filters {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.schedule-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.schedule-filter span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.schedule-filter select,
+.schedule-filter input {
+  border: 1px solid #c9d7ea;
+  border-radius: 8px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: #fbfdff;
+}
+
+.schedule-feedback {
+  margin: 0.5rem 0 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.schedule-feedback--error {
+  color: #a31d1d;
+}
+
+.schedule-feedback--notice {
+  color: #1e5a9a;
+}
+
+.schedule-feedback--warn {
+  color: #8a5a00;
+}
+
 .time-control {
   display: flex;
   align-items: center;
@@ -98,6 +150,11 @@
 
 .schedule-cta:hover {
   background: var(--brand-blue-900);
+}
+
+.schedule-cta:disabled {
+  cursor: wait;
+  background: #7fa4d3;
 }
 
 .schedule-grid-wrap {
@@ -180,6 +237,74 @@
   font-weight: 600;
   cursor: pointer;
   transition: background-color 150ms ease, box-shadow 150ms ease, color 150ms ease;
+}
+
+.slot-cell--filled {
+  background: #f4f8ff;
+  color: var(--ink);
+  text-align: left;
+  padding: 0.35rem;
+}
+
+.schedule-card {
+  --patient-accent: #164984;
+  --patient-surface: #f4f8ff;
+  --patient-border: #d4e1f4;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 0.42rem 0.45rem 0.45rem 0.5rem;
+  border: 1px solid var(--patient-border);
+  border-left: 4px solid var(--patient-accent);
+  border-radius: 9px;
+  background: var(--patient-surface);
+  box-shadow: 0 1px 0 rgba(17, 24, 39, 0.04);
+}
+
+.schedule-card strong {
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+.schedule-card span,
+.schedule-card p,
+.schedule-card em {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #475c79;
+  line-height: 1.25;
+}
+
+.schedule-card__meta {
+  font-weight: 700;
+  color: var(--patient-accent) !important;
+}
+
+.schedule-card__remove {
+  margin-top: 0.2rem;
+  align-self: flex-start;
+  border: 1px solid var(--patient-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  background: #ffffff;
+  color: var(--patient-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.schedule-card__remove:hover {
+  background: color-mix(in srgb, var(--patient-surface) 75%, #ffffff 25%);
+}
+
+.schedule-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .slot-cell:hover {
