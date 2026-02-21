@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+import logging
+from time import perf_counter
+
+from fastapi import FastAPI, Request
+
+from app.config import configure_logging, get_settings
+from app.models.schemas import HealthResponse
+from app.routers.patients import router as patients_router
+from app.routers.schedule import router as schedule_router
+from app.routers.task_definitions import router as task_definitions_router
+from app.routers.tasks import router as tasks_router
+
+settings = get_settings()
+configure_logging(settings.log_level)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="HackEurope2026 Backend", version="0.2.0")
+app.include_router(patients_router)
+app.include_router(task_definitions_router)
+app.include_router(tasks_router)
+app.include_router(schedule_router)
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = request.headers.get("x-request-id", "-")
+    started_at = perf_counter()
+
+    try:
+        response = await call_next(request)
+    except Exception:  # noqa: BLE001
+        elapsed_ms = (perf_counter() - started_at) * 1000
+        logger.exception(
+            "request_failed method=%s path=%s request_id=%s duration_ms=%.2f",
+            request.method,
+            request.url.path,
+            request_id,
+            elapsed_ms,
+        )
+        raise
+
+    elapsed_ms = (perf_counter() - started_at) * 1000
+    logger.info(
+        "request_complete method=%s path=%s status_code=%s request_id=%s duration_ms=%.2f",
+        request.method,
+        request.url.path,
+        response.status_code,
+        request_id,
+        elapsed_ms,
+    )
+    return response
+
+
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(status="ok", env=settings.env)
