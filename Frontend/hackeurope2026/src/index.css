@@ -1,11 +1,23 @@
 :root {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif, 'Manrope';
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+body {
+  margin: 0;
+  min-width: 375px;
+  min-height: 100vh;
+  background: #e9edf2;
+  color: #14263f;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
 *,
 *::before,
 *::after {
