@@ -1,3 +1,4 @@
+import PatientBoardPage from './features/patient-board/PatientBoardPage'
 import './App.css'
 import { ScheduleGrid } from './schedule/ScheduleGrid'
 
@@ -7,6 +8,7 @@ function App() {
       <ScheduleGrid />
     </main>
   )
+  return <PatientBoardPage />
 }
 
 export default App

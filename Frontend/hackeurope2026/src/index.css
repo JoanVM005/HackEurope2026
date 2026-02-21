@@ -1,5 +1,5 @@
 :root {
-  font-family: "Avenir Next", "Nunito Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif, 'Manrope';
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -18,4 +18,23 @@ body {
   width: 100%;
   min-height: 100vh;
   box-sizing: border-box;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: #0f2745;
+  background: #f3f7fb;
 }
