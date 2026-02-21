@@ -5,18 +5,19 @@
 begin;
 
 -- 1) Patients (severity represented in description + different admitted_at)
-insert into patients (patient_id, first_name, last_name, description, admitted_at)
+insert into patients (patient_id, first_name, last_name, description, time_preferences, admitted_at)
 values
-  (1001, 'Elena', 'Ruiz', 'Severity: critical. Severe chest pain and hypotension.', now() - interval '6 hours'),
-  (1002, 'Martin', 'Lopez', 'Severity: high. Persistent dyspnea and fever.', now() - interval '4 hours'),
-  (1003, 'Sofia', 'Navarro', 'Severity: medium. Post-op monitoring required.', now() - interval '3 hours'),
-  (1004, 'David', 'Moreno', 'Severity: low-medium. Mild abdominal pain under observation.', now() - interval '2 hours'),
-  (1005, 'Paula', 'Santos', 'Severity: low. Stable, awaiting routine checks.', now() - interval '1 hour')
+  ('P-001', 'Elena', 'Ruiz', 'Severity: critical. Severe chest pain and hypotension.', 'pref_time=morning; avoid=late_evening', now() - interval '6 hours'),
+  ('P-002', 'Martin', 'Lopez', 'Severity: high. Persistent dyspnea and fever.', 'pref_time=afternoon; avoid=08:00-10:00', now() - interval '4 hours'),
+  ('P-003', 'Sofia', 'Navarro', 'Severity: medium. Post-op monitoring required.', 'pref_time=midday', now() - interval '3 hours'),
+  ('P-004', 'David', 'Moreno', 'Severity: low-medium. Mild abdominal pain under observation.', 'pref_time=morning; avoid=13:00-15:00', now() - interval '2 hours'),
+  ('P-005', 'Paula', 'Santos', 'Severity: low. Stable, awaiting routine checks.', 'pref_time=flexible', now() - interval '1 hour')
 on conflict (patient_id) do update
 set
   first_name = excluded.first_name,
   last_name = excluded.last_name,
   description = excluded.description,
+  time_preferences = excluded.time_preferences,
   admitted_at = excluded.admitted_at,
   updated_at = now();
 

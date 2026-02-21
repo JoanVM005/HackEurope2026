@@ -59,6 +59,7 @@ function PatientDetailsPopupContent({
   const [firstNameDraft, setFirstNameDraft] = useState(patient.firstName)
   const [lastNameDraft, setLastNameDraft] = useState(patient.lastName)
   const [descriptionDraft, setDescriptionDraft] = useState(patient.description)
+  const [timePreferencesDraft, setTimePreferencesDraft] = useState(patient.timePreferences)
   const [admissionTimestampDraft, setAdmissionTimestampDraft] = useState(patient.admissionTimestamp)
   const [taskDraft, setTaskDraft] = useState<Record<string, boolean>>({})
   const [taskSnapshot, setTaskSnapshot] = useState<Record<string, TaskSnapshot>>({})
@@ -83,6 +84,7 @@ function PatientDetailsPopupContent({
     setFirstNameDraft(patient.firstName)
     setLastNameDraft(patient.lastName)
     setDescriptionDraft(patient.description)
+    setTimePreferencesDraft(patient.timePreferences)
     setAdmissionTimestampDraft(patient.admissionTimestamp)
   }, [patient])
 
@@ -211,6 +213,7 @@ function PatientDetailsPopupContent({
     const nextFirstName = firstNameDraft.trim()
     const nextLastName = lastNameDraft.trim()
     const nextDescription = descriptionDraft.trim()
+    const nextTimePreferences = timePreferencesDraft.trim()
     if (!nextFirstName || !nextLastName || !nextDescription) return
 
     setIsSaving(true)
@@ -220,6 +223,7 @@ function PatientDetailsPopupContent({
         first_name: nextFirstName,
         last_name: nextLastName,
         description: nextDescription,
+        time_preferences: nextTimePreferences || null,
         admitted_at: admittedAtIso,
       })
 
@@ -294,6 +298,15 @@ function PatientDetailsPopupContent({
           <label className="patient-popup__field--full">
             <span>Description</span>
             <input type="text" value={descriptionDraft} onChange={(event) => setDescriptionDraft(event.target.value)} />
+          </label>
+          <label className="patient-popup__field--full">
+            <span>Time preferences</span>
+            <input
+              type="text"
+              value={timePreferencesDraft}
+              onChange={(event) => setTimePreferencesDraft(event.target.value)}
+              placeholder="e.g. prefers mornings, avoid late afternoons"
+            />
           </label>
         </div>
 

@@ -23,10 +23,14 @@ create table if not exists public.patients (
   first_name text not null,
   last_name text not null,
   description text not null,
+  time_preferences text,
   admitted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.patients
+  add column if not exists time_preferences text;
 
 drop trigger if exists trg_patients_updated_at on public.patients;
 create trigger trg_patients_updated_at

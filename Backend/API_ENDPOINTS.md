@@ -36,6 +36,7 @@ Most errors use FastAPI default:
   "first_name": "Elena",
   "last_name": "Ruiz",
   "description": "Severity: critical",
+  "time_preferences": "pref_time=morning; avoid=late_evening",
   "admitted_at": "2026-02-21T08:00:00Z"
 }
 ```
@@ -47,6 +48,7 @@ Most errors use FastAPI default:
   "first_name": "Elena",
   "last_name": "Ruiz",
   "description": "Severity: critical",
+  "time_preferences": "pref_time=morning; avoid=late_evening",
   "admitted_at": "2026-02-21T08:00:00+00:00",
   "created_at": "2026-02-21T09:00:00+00:00",
   "updated_at": "2026-02-21T09:00:00+00:00"
@@ -77,6 +79,7 @@ Most errors use FastAPI default:
   "first_name": "Elena",
   "last_name": "Ruiz",
   "description": "Updated",
+  "time_preferences": "pref_time=afternoon; avoid=08:00-10:00",
   "admitted_at": "2026-02-21T08:30:00Z"
 }
 ```

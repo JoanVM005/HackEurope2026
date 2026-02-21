@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from functools import lru_cache
-from typing import Any
+from typing import Any, Mapping
 
 from openai import APIConnectionError, APIError, APITimeoutError, BadRequestError, OpenAI, RateLimitError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -26,9 +26,24 @@ PRIORITY_SCHEMA: dict[str, Any] = {
 }
 
 SYSTEM_PROMPT = (
-    "You are a hospital triage prioritization assistant. "
-    "Return only the requested JSON values and avoid extra detail."
+    "You are an operational scheduling prioritization assistant for a hospital workflow planner. "
+    "Score only from provided operational context. "
+    "Do not invent facts. "
+    "Do not use diagnosis assumptions. "
+    "Return strictly one JSON object matching the schema. "
+    "Prioritize with this rubric: "
+    "priority=5 for immediate operational risk (already overdue, severe delay risk, or blocking critical workflow), "
+    "priority=4 for high urgency within the next planning window, "
+    "priority=3 for normal active work, "
+    "priority=2 for low urgency and can be deferred, "
+    "priority=1 for backlog/non-urgent. "
+    "Confidence must reflect data quality and signal strength: high when context is explicit, low when sparse/conflicting. "
+    "Reason must be concise, concrete, and <=200 chars."
 )
+
+MAX_PATIENT_DESCRIPTION_CHARS = 2_000
+MAX_TASK_TITLE_CHARS = 180
+MAX_TASK_DETAILS_CHARS = 2_000
 
 
 class LlmServiceError(Exception):
@@ -45,14 +60,59 @@ class OpenAIPlannerClient:
         self._model = model
 
     @staticmethod
+    def _sanitize_text(value: str, max_chars: int) -> str:
+        compact = " ".join(value.split())
+        if len(compact) <= max_chars:
+            return compact
+        return compact[: max_chars - 3].rstrip() + "..."
+
+    @staticmethod
+    def _format_detail_value(value: Any) -> str:
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, separators=(",", ":"), sort_keys=True)
+        return str(value)
+
+    @staticmethod
+    def _format_task_details(task_details: str | None) -> str:
+        if not task_details or not task_details.strip():
+            return "none provided"
+
+        raw = task_details.strip()
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return OpenAIPlannerClient._sanitize_text(raw, MAX_TASK_DETAILS_CHARS)
+
+        if isinstance(parsed, Mapping):
+            parts: list[str] = []
+            for key in sorted(parsed):
+                value = OpenAIPlannerClient._format_detail_value(parsed[key])
+                value = OpenAIPlannerClient._sanitize_text(value, 240)
+                parts.append(f"{key}={value}")
+            details = "; ".join(parts)
+            return OpenAIPlannerClient._sanitize_text(details, MAX_TASK_DETAILS_CHARS)
+
+        if isinstance(parsed, list):
+            rendered = OpenAIPlannerClient._format_detail_value(parsed)
+            return OpenAIPlannerClient._sanitize_text(rendered, MAX_TASK_DETAILS_CHARS)
+
+        return OpenAIPlannerClient._sanitize_text(str(parsed), MAX_TASK_DETAILS_CHARS)
+
+    @staticmethod
     def _build_user_prompt(patient_description: str, task_title: str, task_details: str | None) -> str:
-        details = task_details or ""
+        patient_context = OpenAIPlannerClient._sanitize_text(
+            patient_description, MAX_PATIENT_DESCRIPTION_CHARS
+        )
+        normalized_title = OpenAIPlannerClient._sanitize_text(task_title, MAX_TASK_TITLE_CHARS)
+        details = OpenAIPlannerClient._format_task_details(task_details)
         return (
-            "Estimate urgency for this task.\n"
-            f"Patient context: {patient_description}\n"
-            f"Task title: {task_title}\n"
+            "Estimate priority for this scheduling task.\n"
+            "Use operational factors such as due timing, waiting pressure, attendance behavior, "
+            "and workflow impact if the task is delayed.\n"
+            f"Patient context: {patient_context}\n"
+            f"Task title: {normalized_title}\n"
             f"Task details: {details}\n"
-            "Output the JSON object only."
+            "Return JSON only."
         )
 
     @staticmethod
@@ -238,7 +298,28 @@ class OpenAIPlannerClient:
             )
         except Exception as exc:  # noqa: BLE001
             logger.error("OpenAI call failed; using fallback priority", exc_info=exc)
-            return LlmPriorityResult(priority=3, confidence=0.0, reason="fallback")
+            return LlmPriorityResult(
+                priority=3,
+                confidence=0.0,
+                reason="defaulted due to llm failure",
+            )
+
+    def estimate_priority_from_features(
+        self,
+        patient_description: str,
+        task_title: str,
+        operational_features: dict[str, Any] | None = None,
+    ) -> LlmPriorityResult:
+        details = (
+            json.dumps(operational_features, separators=(",", ":"), sort_keys=True)
+            if operational_features is not None
+            else None
+        )
+        return self.estimate_priority(
+            patient_description=patient_description,
+            task_title=task_title,
+            task_details=details,
+        )
 
 
 @lru_cache(maxsize=8)
