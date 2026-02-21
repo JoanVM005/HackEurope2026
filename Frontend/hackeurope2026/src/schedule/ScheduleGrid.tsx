@@ -1,52 +1,27 @@
 import "./ScheduleGrid.css";
-
-export type Clinician = {
-  id: string;
-  name: string;
-  role: string;
-};
+import { useMemo, useState } from "react";
+import { DEFAULT_CLINICIANS } from "../types/clinician";
+import type { Clinician } from "../types/clinician";
 
 type ScheduleGridProps = {
   clinicians?: Clinician[];
   onConfigurePatients?: () => void;
 };
 
-const defaultClinicians: Clinician[] = [
-  { id: "clin-1", name: "Dr. Shah", role: "OT" },
-  { id: "clin-2", name: "Nurse Doyle", role: "Nurse" },
-  { id: "clin-3", name: "Dr. Almeida", role: "Physio" },
-  { id: "clin-4", name: "Dr. Kane", role: "Doctor" },
-  { id: "clin-5", name: "Dr. Jones", role: "Dietician" },
-  { id: "clin-6", name: "Dr. Smith", role: "Research" },
-  { id: "clin-7", name: "Mary Jane", role: "SLT" },
-];
+const STEP_MINUTES = 30;
+const MIN_TIME = 0;
+const MAX_START_TIME = 23 * 60;
+const MAX_END_TIME = 23 * 60 + 30;
 
-const timeSlots = [
-  "08:00",
-  "08:30",
-  "09:00",
-  "09:30",
-  "10:00",
-  "10:30",
-  "11:00",
-  "11:30",
-  "12:00",
-  "12:30",
-  "13:00",
-  "13:30",
-  "14:00",
-  "14:30",
-  "15:00",
-  "15:30",
-  "16:00",
-  "16:30",
-];
-
-export function ScheduleGrid({ clinicians = defaultClinicians, onConfigurePatients }: ScheduleGridProps) {
-  const activeClinicians = clinicians.length > 0 ? clinicians : defaultClinicians;
+export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatients }: ScheduleGridProps) {
+  const activeClinicians = clinicians.length > 0 ? clinicians : DEFAULT_CLINICIANS;
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("17:00");
+  const timeSlots = useMemo(() => createTimeSlots(startTime, endTime), [startTime, endTime]);
   const columnWidthRem = 10;
   const timeColumnWidthRem = 8.5;
-  const minGridWidthRem = timeColumnWidthRem + activeClinicians.length * columnWidthRem;
+  const clinicianCount = Math.max(activeClinicians.length, 1);
+  const minGridWidthRem = timeColumnWidthRem + clinicianCount * columnWidthRem;
 
   return (
     <section className="schedule" aria-label="Clinician timetable">
@@ -56,6 +31,46 @@ export function ScheduleGrid({ clinicians = defaultClinicians, onConfigurePatien
           <p>
             Times on the left, clinicians across the top. Select cells later to place patients into matching slots.
           </p>
+          <div className="time-controls" aria-label="Clinic hours">
+            <label className="time-control">
+              <span>Start time</span>
+              <input
+                type="time"
+                step={STEP_MINUTES * 60}
+                min="00:00"
+                max="23:00"
+                value={startTime}
+                onChange={(event) => {
+                  const newStart = clamp(minutesFromTime(event.target.value), MIN_TIME, MAX_START_TIME);
+                  const currentEnd = minutesFromTime(endTime);
+                  const correctedEnd =
+                    newStart < currentEnd ? currentEnd : clamp(newStart + STEP_MINUTES, STEP_MINUTES, MAX_END_TIME);
+
+                  setStartTime(timeFromMinutes(newStart));
+                  setEndTime(timeFromMinutes(correctedEnd));
+                }}
+              />
+            </label>
+            <label className="time-control">
+              <span>End time</span>
+              <input
+                type="time"
+                step={STEP_MINUTES * 60}
+                min="00:30"
+                max="23:30"
+                value={endTime}
+                onChange={(event) => {
+                  const newEnd = clamp(minutesFromTime(event.target.value), STEP_MINUTES, MAX_END_TIME);
+                  const currentStart = minutesFromTime(startTime);
+                  const correctedStart =
+                    newEnd > currentStart ? currentStart : clamp(newEnd - STEP_MINUTES, MIN_TIME, MAX_START_TIME);
+
+                  setEndTime(timeFromMinutes(newEnd));
+                  setStartTime(timeFromMinutes(correctedStart));
+                }}
+              />
+            </label>
+          </div>
         </div>
         <div className="schedule-actions">
           <span className="clinician-count">{activeClinicians.length} clinicians</span>
@@ -74,17 +89,24 @@ export function ScheduleGrid({ clinicians = defaultClinicians, onConfigurePatien
         <div
           className="schedule-grid"
           style={{
-            gridTemplateColumns: `${timeColumnWidthRem}rem repeat(${activeClinicians.length}, minmax(${columnWidthRem}rem, 1fr))`,
+            gridTemplateColumns: `${timeColumnWidthRem}rem repeat(${clinicianCount}, minmax(${columnWidthRem}rem, 1fr))`,
             minWidth: `${minGridWidthRem}rem`,
           }}
         >
           <div className="corner-cell" />
-          {activeClinicians.map((clinician) => (
-            <div key={clinician.id} className="clinician-cell">
-              <strong>{clinician.name}</strong>
-              <span>{clinician.role}</span>
+          {activeClinicians.length > 0 ? (
+            activeClinicians.map((clinician) => (
+              <div key={clinician.id} className="clinician-cell">
+                <strong>{clinician.name}</strong>
+                <span>{clinician.role}</span>
+              </div>
+            ))
+          ) : (
+            <div className="clinician-cell clinician-cell--empty">
+              <strong>No clinicians</strong>
+              <span>Add at least one clinician to fill the timetable.</span>
             </div>
-          ))}
+          )}
 
           {timeSlots.map((slot) => (
             <Row key={slot} slot={slot} clinicians={activeClinicians} />
@@ -95,20 +117,55 @@ export function ScheduleGrid({ clinicians = defaultClinicians, onConfigurePatien
   );
 }
 
+function createTimeSlots(start: string, end: string): string[] {
+  const startMinutes = minutesFromTime(start);
+  const endMinutes = minutesFromTime(end);
+  const slots: string[] = [];
+
+  for (let minute = startMinutes; minute < endMinutes; minute += STEP_MINUTES) {
+    slots.push(timeFromMinutes(minute));
+  }
+
+  return slots;
+}
+
+function minutesFromTime(value: string): number {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function timeFromMinutes(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60)
+    .toString()
+    .padStart(2, "0");
+  const minutes = (totalMinutes % 60).toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 function Row({ slot, clinicians }: { slot: string; clinicians: Clinician[] }) {
   return (
     <>
       <div className="time-cell">{slot}</div>
-      {clinicians.map((clinician) => (
-        <button
-          key={`${slot}-${clinician.id}`}
-          type="button"
-          className="slot-cell"
-          aria-label={`Empty slot at ${slot} for ${clinician.name}`}
-        >
-          <span>Open slot</span>
+      {clinicians.length > 0 ? (
+        clinicians.map((clinician) => (
+          <button
+            key={`${slot}-${clinician.id}`}
+            type="button"
+            className="slot-cell"
+            aria-label={`Empty slot at ${slot} for ${clinician.name}`}
+          >
+            <span>Open slot</span>
+          </button>
+        ))
+      ) : (
+        <button type="button" className="slot-cell slot-cell--disabled" disabled aria-label={`No clinician at ${slot}`}>
+          <span>Add clinician</span>
         </button>
-      ))}
+      )}
     </>
   );
 }

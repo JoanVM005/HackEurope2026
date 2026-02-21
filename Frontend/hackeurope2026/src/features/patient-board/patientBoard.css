@@ -8,7 +8,9 @@
 }
 
 .patient-board__hero {
+  position: relative;
   margin-bottom: 1rem;
+  padding-top: 0.3rem;
 }
 
 .patient-board__hero h1 {
@@ -47,9 +49,27 @@
 }
 
 .patient-board__top-actions {
-  margin-bottom: 1rem;
+  position: absolute;
+  top: 0;
+  right: 0;
   display: flex;
   justify-content: flex-end;
+  z-index: 2;
+}
+
+.patient-board__create-btn {
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  padding: 0.95rem 1.45rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f4f93, #2a7dcb);
+  box-shadow: 0 12px 24px rgb(15 79 147 / 28%);
+}
+
+.patient-board__create-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 .patient-board__composer {

@@ -14,6 +14,8 @@ import './patientBoard.css'
 
 interface PatientBoardPageProps {
   onCreateSchedule?: () => void
+  clinicians: Clinician[]
+  onCliniciansChange: (clinicians: Clinician[]) => void
 }
 
 export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageProps) {
@@ -159,7 +161,7 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
         {noticeMessage ? <p className="patient-board__feedback patient-board__feedback--notice">{noticeMessage}</p> : null}
         {onCreateSchedule ? (
           <div className="patient-board__top-actions">
-            <button type="button" className="page-action-btn" onClick={onCreateSchedule}>
+            <button type="button" className="page-action-btn patient-board__create-btn" onClick={onCreateSchedule}>
               Create schedule
             </button>
           </div>
@@ -271,4 +273,11 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
       ) : null}
     </main>
   )
+}
+
+function createClinicianId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `clin-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
