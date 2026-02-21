@@ -1,0 +1,230 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+.patient-board {
+  --avelios-blue-900: #134787;
+  --avelios-blue-700: #1f5fa4;
+  --avelios-blue-500: #4f90cd;
+  --avelios-blue-200: #d8e8f8;
+  --avelios-surface: #f3f7fb;
+  --avelios-ink: #0f2745;
+  --avelios-muted: #4b647f;
+  min-height: 100vh;
+  width: 100%;
+  padding: clamp(1.25rem, 2vw, 2rem) clamp(1rem, 3vw, 2.5rem) 2rem;
+  background:
+    radial-gradient(circle at 85% -10%, rgb(79 144 205 / 18%), transparent 40%),
+    radial-gradient(circle at -10% 100%, rgb(31 95 164 / 15%), transparent 45%),
+    var(--avelios-surface);
+}
+
+.patient-board__hero {
+  margin-bottom: 1rem;
+}
+
+.patient-board__hero h1 {
+  margin: 0;
+  color: var(--avelios-ink);
+  font-size: clamp(1.9rem, 3.6vw, 3rem);
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.patient-board__subtitle {
+  margin: 0.8rem 0 1rem;
+  max-width: 74ch;
+  color: var(--avelios-muted);
+  font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+}
+
+.patient-board__composer {
+  display: grid;
+  grid-template-columns: 1.4fr 2fr auto;
+  gap: 0.75rem;
+  align-items: end;
+  border: 1px solid var(--avelios-blue-200);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff, #f7fbff);
+  padding: 0.9rem;
+}
+
+.patient-board__input-wrap,
+.patient-board__test-options {
+  margin: 0;
+}
+
+.patient-board__input-wrap span,
+.patient-board__test-options legend {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--avelios-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.patient-board__input-wrap input {
+  width: 100%;
+  border: 1px solid #bfd7ef;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0.62rem 0.7rem;
+  color: var(--avelios-ink);
+  font: inherit;
+}
+
+.patient-board__test-options {
+  border: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.7rem;
+}
+
+.patient-board__test-options label,
+.test-checklist__item label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--avelios-ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.patient-board__test-options input,
+.test-checklist__item input {
+  accent-color: var(--avelios-blue-700);
+}
+
+.patient-board__add-btn {
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1e5fa3, #2d74bd);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.68rem 1rem;
+  cursor: pointer;
+}
+
+.patient-board__add-btn:hover {
+  filter: brightness(1.04);
+}
+
+.patient-board__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 1.35rem;
+}
+
+.patient-card {
+  border-radius: 16px;
+  border: 1px solid #cfe0f2;
+  background: linear-gradient(165deg, #ffffff 0%, #f8fcff 100%);
+  padding: 1.45rem;
+  box-shadow: 0 8px 20px rgb(17 68 124 / 9%);
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.patient-card:hover {
+  border-color: #b8d3ec;
+  box-shadow: 0 10px 24px rgb(17 68 124 / 12%);
+}
+
+.patient-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+
+.patient-card__header h2 {
+  margin: 0;
+  color: var(--avelios-ink);
+  font-size: 1.48rem;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.patient-card__actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.card-btn {
+  border: 1px solid #070707;
+  border-radius: 8px;
+  background: #f1f7fe;
+  color: #070707;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.62rem 0.78rem;
+  cursor: pointer;
+}
+
+.card-btn--primary {
+  background: #dcecff;
+}
+
+.card-btn--danger {
+  color: #030303;
+  background: #f17a7a;
+}
+
+.patient-card__name-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #bfd7ef;
+  border-radius: 9px;
+  padding: 0.68rem 0.78rem;
+  color: var(--avelios-ink);
+  font: inherit;
+  font-size: 1.18rem;
+  font-weight: 600;
+}
+
+.patient-card__meta {
+  margin: 0.72rem 0 0.92rem;
+  color: var(--avelios-muted);
+  font-size: 1.06rem;
+  font-weight: 600;
+}
+
+.test-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.72rem;
+}
+
+.test-checklist__item {
+  border: 1px solid #d6e5f5;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0.75rem 0.82rem;
+}
+
+.test-checklist__item label {
+  font-size: 1rem;
+}
+
+.patient-board__empty {
+  margin: 0;
+  border: 1px dashed #b8d3ec;
+  border-radius: 14px;
+  background: #f9fcff;
+  color: var(--avelios-muted);
+  font-weight: 600;
+  padding: 1rem;
+}
+
+@media (max-width: 1080px) {
+  .patient-board__composer {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
