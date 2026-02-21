@@ -1,20 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
 .patient-board {
-  --avelios-blue-900: #134787;
-  --avelios-blue-700: #1f5fa4;
-  --avelios-blue-500: #4f90cd;
-  --avelios-blue-200: #d8e8f8;
-  --avelios-surface: #f3f7fb;
-  --avelios-ink: #0f2745;
-  --avelios-muted: #4b647f;
   min-height: 100vh;
   width: 100%;
   padding: clamp(1.25rem, 2vw, 2rem) clamp(1rem, 3vw, 2.5rem) 2rem;
-  background:
-    radial-gradient(circle at 85% -10%, rgb(79 144 205 / 18%), transparent 40%),
-    radial-gradient(circle at -10% 100%, rgb(31 95 164 / 15%), transparent 45%),
-    var(--avelios-surface);
 }
 
 .patient-board__hero {
@@ -23,7 +10,7 @@
 
 .patient-board__hero h1 {
   margin: 0;
-  color: var(--avelios-ink);
+  color: var(--ink);
   font-size: clamp(1.9rem, 3.6vw, 3rem);
   font-weight: 800;
   line-height: 1.05;
@@ -32,8 +19,14 @@
 .patient-board__subtitle {
   margin: 0.8rem 0 1rem;
   max-width: 74ch;
-  color: var(--avelios-muted);
+  color: var(--muted);
   font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+}
+
+.patient-board__top-actions {
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .patient-board__composer {
@@ -41,7 +34,7 @@
   grid-template-columns: 1.4fr 2fr auto;
   gap: 0.75rem;
   align-items: end;
-  border: 1px solid var(--avelios-blue-200);
+  border: 1px solid var(--brand-blue-200);
   border-radius: 16px;
   background: linear-gradient(180deg, #ffffff, #f7fbff);
   padding: 0.9rem;
@@ -56,7 +49,7 @@
 .patient-board__test-options legend {
   display: block;
   margin-bottom: 0.45rem;
-  color: var(--avelios-muted);
+  color: var(--muted);
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -69,7 +62,7 @@
   border-radius: 10px;
   background: #ffffff;
   padding: 0.62rem 0.7rem;
-  color: var(--avelios-ink);
+  color: var(--ink);
   font: inherit;
 }
 
@@ -86,20 +79,20 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: var(--avelios-ink);
+  color: var(--ink);
   font-size: 0.88rem;
   font-weight: 600;
 }
 
 .patient-board__test-options input,
 .test-checklist__item input {
-  accent-color: var(--avelios-blue-700);
+  accent-color: var(--brand-blue-700);
 }
 
 .patient-board__add-btn {
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #1e5fa3, #2d74bd);
+  background: linear-gradient(135deg, var(--brand-blue-700), #2d74bd);
   color: #ffffff;
   font: inherit;
   font-weight: 700;
@@ -140,7 +133,7 @@
 
 .patient-card__header h2 {
   margin: 0;
-  color: var(--avelios-ink);
+  color: var(--ink);
   font-size: 1.48rem;
   font-weight: 760;
   line-height: 1.2;
@@ -152,10 +145,10 @@
 }
 
 .card-btn {
-  border: 1px solid #070707;
+  border: 1px solid var(--brand-blue-200);
   border-radius: 8px;
   background: #f1f7fe;
-  color: #070707;
+  color: var(--brand-blue-700);
   font: inherit;
   font-size: 0.95rem;
   font-weight: 700;
@@ -169,8 +162,9 @@
 }
 
 .card-btn--danger {
-  color: #030303;
-  background: #f17a7a;
+  color: #7a2532;
+  background: #ffe9ee;
+  border-color: #f2bcc6;
 }
 
 .patient-card__name-input {
@@ -179,7 +173,7 @@
   border: 1px solid #bfd7ef;
   border-radius: 9px;
   padding: 0.68rem 0.78rem;
-  color: var(--avelios-ink);
+  color: var(--ink);
   font: inherit;
   font-size: 1.18rem;
   font-weight: 600;
@@ -187,7 +181,7 @@
 
 .patient-card__meta {
   margin: 0.72rem 0 0.92rem;
-  color: var(--avelios-muted);
+  color: var(--muted);
   font-size: 1.06rem;
   font-weight: 600;
 }
@@ -217,7 +211,7 @@
   border: 1px dashed #b8d3ec;
   border-radius: 14px;
   background: #f9fcff;
-  color: var(--avelios-muted);
+  color: var(--muted);
   font-weight: 600;
   padding: 1rem;
 }
