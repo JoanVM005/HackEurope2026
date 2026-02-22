@@ -66,6 +66,7 @@ class PlannerService:
         "evening": ((18 * 60, 21 * 60),),
         "late_evening": ((20 * 60, 21 * 60),),
     }
+    MAX_WAIT_MINUTES = 480
 
     def __init__(
         self,
@@ -98,7 +99,8 @@ class PlannerService:
         if normalized_admitted is None:
             return 0.0
         waiting_seconds = max(0.0, (reference_time - normalized_admitted).total_seconds())
-        return waiting_seconds / 60.0
+        waiting_minutes = waiting_seconds / 60.0
+        return min(waiting_minutes, float(self.MAX_WAIT_MINUTES))
 
     def calculate_score(
         self,
@@ -117,6 +119,31 @@ class PlannerService:
 
     def _schedule_datetime(self, schedule_date: date, hour: int) -> datetime:
         return datetime.combine(schedule_date, time(hour=hour, minute=0, tzinfo=timezone.utc))
+
+    def _preferred_hour_from_text(self, time_preferences: str | None) -> int | None:
+        if not time_preferences:
+            return None
+        text = time_preferences.lower()
+
+        # Direct hour references like "9am", "14:00", "2 pm".
+        match = re.search(r"\b([01]?\d|2[0-3])(?::([0-5]\d))?\s*(am|pm)?\b", text)
+        if match:
+            hour = int(match.group(1))
+            ampm = match.group(3)
+            if ampm == "pm" and hour < 12:
+                hour += 12
+            if ampm == "am" and hour == 12:
+                hour = 0
+            return self._clamp_hour(hour)
+
+        if "morning" in text or "early" in text:
+            return self._clamp_hour(9)
+        if "afternoon" in text:
+            return self._clamp_hour(14)
+        if "evening" in text or "late" in text:
+            return self._clamp_hour(17)
+
+        return None
 
     def _planning_anchor(self, now_utc: datetime) -> datetime:
         if now_utc.tzinfo is None:
@@ -656,7 +683,8 @@ class PlannerService:
                         "task_name": task.task_name,
                         "source_patient_task_id": task.id,
                         "preferred_date": planning_anchor.date(),
-                        "preferred_hour": planning_anchor.hour,
+                        "preferred_hour": self._preferred_hour_from_text(context.time_preferences)
+                        or planning_anchor.hour,
                         "priority": effective_priority,
                         "priority_score": score,
                         "reason": reason,

@@ -243,6 +243,7 @@ class PlannedScheduleItem(BaseSchema):
     patient_name: str
     day: date
     hour: int = Field(ge=9, le=21)
+    priority: int = Field(ge=1, le=5)
     priority_score: float = Field(ge=0)
     reason: str = Field(min_length=1, max_length=200)
     status: ScheduleItemStatus = ScheduleItemStatus.pending
