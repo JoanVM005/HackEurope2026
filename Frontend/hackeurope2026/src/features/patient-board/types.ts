@@ -8,6 +8,7 @@ export interface PatientCardData {
   lastName: string
   description: string
   timePreferences: string
+  conversationPdfUrl: string | null
   priorityFinal: number
   prioritySuggested: number | null
   modelReason: string | null

@@ -322,6 +322,16 @@ function PatientDetailsPopupContent({
               placeholder="e.g. prefers mornings, avoid late afternoons"
             />
           </label>
+          <div className="patient-popup__field--full patient-popup__transcript">
+            <span>Voice transcript PDF</span>
+            {patient.conversationPdfUrl ? (
+              <a href={patient.conversationPdfUrl} target="_blank" rel="noreferrer">
+                Open transcript
+              </a>
+            ) : (
+              <p>No transcript attached.</p>
+            )}
+          </div>
         </div>
 
         <fieldset className="patient-popup__tasks">

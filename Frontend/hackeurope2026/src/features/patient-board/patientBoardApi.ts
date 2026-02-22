@@ -8,6 +8,7 @@ interface PatientResponseDto {
   last_name: string
   description: string
   time_preferences?: string | null
+  conversation_pdf_url?: string | null
   priority_final: number
   priority_suggested?: number | null
   model_reason?: string | null
@@ -43,6 +44,7 @@ interface CreatePatientPayload {
   last_name: string
   description: string
   time_preferences?: string | null
+  conversation_pdf_url?: string | null
   priority_final: number
   priority_suggested?: number | null
   model_reason?: string | null
@@ -56,6 +58,7 @@ interface UpdatePatientPayload {
   last_name?: string
   description?: string
   time_preferences?: string | null
+  conversation_pdf_url?: string | null
   priority_final?: number
   priority_suggested?: number | null
   model_reason?: string | null
@@ -111,6 +114,7 @@ function mapPatientDtoToUi(dto: PatientResponseDto): PatientCardData {
     lastName: dto.last_name,
     description: dto.description,
     timePreferences: dto.time_preferences ?? '',
+    conversationPdfUrl: dto.conversation_pdf_url ?? null,
     priorityFinal: dto.priority_final,
     prioritySuggested: dto.priority_suggested ?? null,
     modelReason: dto.model_reason ?? null,

@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import configure_logging, get_settings
+from app.intake_voice.router import router as voice_intake_router
 from app.models.schemas import HealthResponse
 from app.routers.patients import router as patients_router
 from app.routers.preferences import router as preferences_router
@@ -41,6 +42,7 @@ app.include_router(preferences_router)
 app.include_router(task_definitions_router)
 app.include_router(tasks_router)
 app.include_router(schedule_router)
+app.include_router(voice_intake_router)
 
 
 @app.middleware("http")

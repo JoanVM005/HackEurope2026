@@ -152,6 +152,7 @@ class SupabaseRepository:
             "last_name": row.get("last_name"),
             "description": row.get("description"),
             "time_preferences": row.get("time_preferences"),
+            "conversation_pdf_url": row.get("conversation_pdf_url"),
             "priority_final": priority_final,
             "priority_suggested": row.get("priority_suggested"),
             "model_reason": row.get("model_reason"),
@@ -216,6 +217,7 @@ class SupabaseRepository:
 
         return PlannedScheduleItem(
             schedule_item_id=row["id"],
+            patient_external_id=patient_info.get("patient_id") if patient_info else None,
             task_name=row["task_name"],
             patient_name=patient_name,
             day=scheduled_for.date(),

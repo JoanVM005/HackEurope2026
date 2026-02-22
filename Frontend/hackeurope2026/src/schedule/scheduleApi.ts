@@ -10,6 +10,7 @@ interface SchedulePlanResponseDto {
 
 interface ScheduleItemDto {
   schedule_item_id: string
+  patient_external_id?: number | null
   source_patient_task_id?: string | null
   task_name: string
   patient_name: string
@@ -43,6 +44,7 @@ interface AppliedPreferencesSummaryDto {
 
 export interface ScheduleItem {
   scheduleItemId: string
+  patientExternalId: number | null
   sourcePatientTaskId: string | null
   taskName: string
   patientName: string
@@ -185,6 +187,7 @@ export class ScheduleRescheduleConflictError extends Error {
 function mapItem(dto: ScheduleItemDto): ScheduleItem {
   return {
     scheduleItemId: dto.schedule_item_id,
+    patientExternalId: dto.patient_external_id ?? null,
     sourcePatientTaskId: dto.source_patient_task_id ?? null,
     taskName: dto.task_name,
     patientName: dto.patient_name,
@@ -280,6 +283,11 @@ export async function replanSchedule(): Promise<ReplanScheduleResult> {
     appliedPreferences: mapAppliedPreferences(response.applied_preferences),
     warnings: response.warnings ?? [],
   }
+}
+
+export async function listCurrentSchedule(): Promise<ScheduleItem[]> {
+  const response = await apiRequest<SchedulePlanResponseDto>('/schedule')
+  return mapPlan(response)
 }
 
 export async function listScheduleByDay(day: string): Promise<ScheduleItem[]> {

@@ -13,6 +13,35 @@
   padding-top: 0.3rem;
 }
 
+.patient-board__mode-tabs {
+  display: inline-flex;
+  gap: 0.45rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--silver) 75%, var(--primary) 25%);
+  border-radius: 999px;
+  padding: 0.28rem;
+  background: var(--white);
+}
+
+.patient-board__mode-tab {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.52rem 0.85rem;
+  cursor: pointer;
+}
+
+.patient-board__mode-tab--active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--accent-blue) 18%, var(--white) 82%);
+  color: var(--primary);
+}
+
 .patient-board__hero h1 {
   margin: 0;
   color: var(--primary);
@@ -213,8 +242,194 @@
 
 .patient-board__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
   gap: 1rem;
+}
+
+.patient-board__section {
+  margin-top: 1.15rem;
+}
+
+.patient-board__section-title {
+  margin: 0 0 0.7rem;
+  color: var(--primary);
+  font-size: 1.2rem;
+}
+
+.patient-board__pending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.patient-board__pending-card {
+  border: 1px solid color-mix(in srgb, var(--silver) 74%, var(--primary) 26%);
+  border-radius: 14px;
+  background: linear-gradient(
+    165deg,
+    var(--white) 0%,
+    color-mix(in srgb, var(--accent-blue) 10%, var(--white) 90%) 100%
+  );
+  padding: 0.9rem;
+}
+
+.patient-board__pending-card h3 {
+  margin: 0 0 0.45rem;
+  color: var(--primary);
+  font-size: 1.08rem;
+}
+
+.patient-board__pending-card p {
+  margin: 0.32rem 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.patient-board__pending-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.patient-board__voice-composer {
+  border: 1px solid color-mix(in srgb, var(--silver) 75%, var(--primary) 25%);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent-cyan) 16%, transparent), transparent 38%),
+    linear-gradient(180deg, var(--white), color-mix(in srgb, var(--white) 90%, var(--accent-blue) 10%));
+  padding: 0.9rem;
+}
+
+.patient-board__voice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.patient-board__voice-status {
+  margin: 0.7rem 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.patient-board__voice-question {
+  margin: 0.5rem 0 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--silver) 76%, var(--primary) 24%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-cyan) 14%, var(--white) 86%);
+  padding: 0.65rem 0.7rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.patient-board__voice-conversation {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--silver) 80%, var(--primary) 20%);
+  border-radius: 10px;
+  background: var(--white);
+  padding: 0.55rem;
+}
+
+.patient-board__voice-turn {
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
+}
+
+.patient-board__voice-turn span {
+  font-weight: 800;
+}
+
+.patient-board__voice-turn--assistant {
+  color: var(--primary);
+}
+
+.patient-board__voice-turn--doctor {
+  color: var(--ink);
+}
+
+.patient-board__voice-fallback {
+  margin-top: 0.8rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.patient-board__voice-fallback span {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.patient-board__voice-fallback textarea {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--silver) 70%, var(--primary) 30%);
+  border-radius: 10px;
+  background: var(--white);
+  padding: 0.62rem 0.7rem;
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.patient-board__voice-slots {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.patient-board__voice-slots li {
+  border: 1px solid color-mix(in srgb, var(--silver) 76%, var(--primary) 24%);
+  border-radius: 10px;
+  background: var(--white);
+  padding: 0.58rem 0.65rem;
+}
+
+.patient-board__voice-slots span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}
+
+.patient-board__voice-slots strong {
+  color: var(--ink);
+  font-size: 0.93rem;
+}
+
+.patient-board__pending-review-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.patient-board__pending-review-tasks {
+  border: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.7rem;
+}
+
+.patient-board__pending-review-tasks label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.patient-board__pending-review-tasks input {
+  accent-color: var(--accent-blue);
 }
 
 .patient-card {
@@ -379,6 +594,24 @@
 
 .patient-popup__field--full {
   grid-column: span 2;
+}
+
+.patient-popup__transcript {
+  border: 1px solid color-mix(in srgb, var(--silver) 76%, var(--primary) 24%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-cyan) 12%, var(--white) 88%);
+  padding: 0.65rem 0.72rem;
+}
+
+.patient-popup__transcript a {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.patient-popup__transcript p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
 }
 
 .patient-popup__tasks .patient-popup__task {
@@ -606,6 +839,11 @@
 
 @media (max-width: 780px) {
   .patient-board__composer {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-board__voice-slots,
+  .patient-board__pending-review-grid {
     grid-template-columns: 1fr;
   }
 

@@ -8,7 +8,8 @@ interface ApiErrorBody {
 
 function buildHeaders(init?: RequestInit): Headers {
   const headers = new Headers(init?.headers ?? undefined)
-  if (!headers.has('Content-Type')) {
+  const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData
+  if (!isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
   headers.set('X-Doctor-Id', DEFAULT_DOCTOR_ID)

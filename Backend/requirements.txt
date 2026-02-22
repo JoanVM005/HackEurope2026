@@ -11,3 +11,4 @@ openai
 mem0ai
 langchain
 langchain-openai
+reportlab

@@ -20,6 +20,9 @@ export function PatientCard({ patient, onOpen }: PatientCardProps) {
       <span className="patient-card__preference">
         {patient.timePreferences ? `Pref: ${patient.timePreferences}` : 'Pref: none set'}
       </span>
+      <span className="patient-card__preference">
+        Transcript: {patient.conversationPdfUrl ? 'available' : 'none'}
+      </span>
       <span className="patient-card__timestamp">{formattedTimestamp}</span>
     </button>
   )

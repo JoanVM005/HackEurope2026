@@ -32,6 +32,9 @@ pip install -r requirements.txt
 - `SUPABASE_KEY` (required)
 - `OPENAI_API_KEY` (required)
 - `OPENAI_MODEL` (default: `gpt-4o-mini`)
+- `ELEVENLABS_API_KEY` (required for `/voice-intake/.../transcribe`)
+- `ELEVENLABS_STT_MODEL` (default: `scribe_v1`)
+- `VOICE_TRANSCRIPT_BUCKET` (default: `voice-intake-transcripts`)
 - `MEM0_API_KEY` (optional for read fallback, required to persist `/preferences`)
 - `MEM0_PROJECT_ID` (optional; recommended to isolate memory context)
 - `MEM0_ORG_ID` (optional)
@@ -74,6 +77,14 @@ Response:
 - `GET /patients/{patient_id}`
 - `PUT /patients/{patient_id}`
 - `DELETE /patients/{patient_id}`
+
+### Voice Intake
+- `POST /voice-intake/sessions`
+- `GET /voice-intake/sessions`
+- `POST /voice-intake/sessions/{session_id}/transcribe`
+- `POST /voice-intake/sessions/{session_id}/turn`
+- `POST /voice-intake/sessions/{session_id}/finalize`
+- `POST /voice-intake/sessions/{session_id}/confirm`
 
 ### Task Definitions
 - `POST /task-definitions`

@@ -43,6 +43,7 @@ class PatientCreate(BaseSchema):
     last_name: str = Field(min_length=1, max_length=100)
     description: str = Field(min_length=1, max_length=2000)
     time_preferences: Optional[str] = Field(default=None, min_length=1, max_length=1000)
+    conversation_pdf_url: Optional[str] = Field(default=None, min_length=1, max_length=2000)
     priority_final: int = Field(ge=1, le=5)
     priority_suggested: Optional[int] = Field(default=None, ge=1, le=5)
     model_reason: Optional[str] = Field(default=None, min_length=1, max_length=200)
@@ -69,6 +70,7 @@ class PatientUpdate(BaseSchema):
     last_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, min_length=1, max_length=2000)
     time_preferences: Optional[str] = Field(default=None, min_length=1, max_length=1000)
+    conversation_pdf_url: Optional[str] = Field(default=None, min_length=1, max_length=2000)
     priority_final: Optional[int] = Field(default=None, ge=1, le=5)
     priority_suggested: Optional[int] = Field(default=None, ge=1, le=5)
     model_reason: Optional[str] = Field(default=None, min_length=1, max_length=200)
@@ -103,6 +105,7 @@ class PatientResponse(BaseSchema):
     last_name: str
     description: str
     time_preferences: Optional[str] = None
+    conversation_pdf_url: Optional[str] = None
     priority_final: int = Field(ge=1, le=5)
     priority_suggested: Optional[int] = Field(default=None, ge=1, le=5)
     model_reason: Optional[str] = Field(default=None, min_length=1, max_length=200)
@@ -239,6 +242,7 @@ class LlmTimePreferenceNormalization(BaseSchema):
 
 class PlannedScheduleItem(BaseSchema):
     schedule_item_id: UUID
+    patient_external_id: Optional[int] = None
     task_name: str
     patient_name: str
     day: date

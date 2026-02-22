@@ -24,6 +24,7 @@ create table if not exists public.patients (
   last_name text not null,
   description text not null,
   time_preferences text,
+  conversation_pdf_url text,
   priority_final int not null default 3,
   priority_suggested int,
   model_reason text,
@@ -36,6 +37,8 @@ create table if not exists public.patients (
 
 alter table public.patients
   add column if not exists time_preferences text;
+alter table public.patients
+  add column if not exists conversation_pdf_url text;
 alter table public.patients
   add column if not exists priority_final int;
 alter table public.patients
@@ -242,6 +245,65 @@ create unique index uq_schedule_items_task_hour
 on public.schedule_items (task_definition_id, scheduled_for)
 where task_definition_id is not null
   and status = 'pending';
+
+-- -------------------------
+-- voice_intake_sessions (voice-first intake workflow)
+-- -------------------------
+create table if not exists public.voice_intake_sessions (
+  id uuid primary key default gen_random_uuid(),
+  doctor_id text not null,
+  status text not null default 'collecting'
+    check (status in ('collecting', 'confirming', 'complete', 'pending_review', 'confirmed', 'discarded', 'error')),
+  language text not null default 'en',
+  slots jsonb not null default '{}'::jsonb,
+  slot_confidence jsonb not null default '{}'::jsonb,
+  warnings jsonb not null default '[]'::jsonb,
+  pending_review_payload jsonb,
+  pdf_path text,
+  pdf_url text,
+  created_patient_external_id int,
+  created_patient_uuid uuid references public.patients(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists trg_voice_intake_sessions_updated_at on public.voice_intake_sessions;
+create trigger trg_voice_intake_sessions_updated_at
+before update on public.voice_intake_sessions
+for each row
+execute function public.set_updated_at();
+
+create index if not exists idx_voice_intake_sessions_doctor_id
+on public.voice_intake_sessions(doctor_id);
+
+create index if not exists idx_voice_intake_sessions_status
+on public.voice_intake_sessions(status);
+
+create index if not exists idx_voice_intake_sessions_created_patient_external_id
+on public.voice_intake_sessions(created_patient_external_id);
+
+-- -------------------------
+-- voice_intake_turns (session transcripts, no audio storage)
+-- -------------------------
+create table if not exists public.voice_intake_turns (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references public.voice_intake_sessions(id) on delete cascade,
+  turn_index int not null check (turn_index >= 0),
+  speaker text not null check (speaker in ('assistant', 'doctor')),
+  content text not null,
+  source text not null check (source in ('voice', 'text_fallback', 'system')),
+  stt_confidence double precision check (stt_confidence is null or (stt_confidence between 0 and 1)),
+  created_at timestamptz not null default now(),
+  constraint uq_voice_intake_turns_session_turn unique (session_id, turn_index)
+);
+
+create index if not exists idx_voice_intake_turns_session_id
+on public.voice_intake_turns(session_id);
+
+-- Optional: create public bucket for transcript PDFs (hackathon mode)
+insert into storage.buckets (id, name, public)
+values ('voice-intake-transcripts', 'voice-intake-transcripts', true)
+on conflict (id) do nothing;
 
 -- Minimal RLS recommendations for MVP:
 -- alter table public.patients enable row level security;

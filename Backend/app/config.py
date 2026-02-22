@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
 
     openai_model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")
+    elevenlabs_api_key: str | None = Field(default=None, alias="ELEVENLABS_API_KEY")
+    elevenlabs_stt_model: str = Field(default="scribe_v1", alias="ELEVENLABS_STT_MODEL")
+    voice_transcript_bucket: str = Field(
+        default="voice-intake-transcripts",
+        alias="VOICE_TRANSCRIPT_BUCKET",
+    )
     mem0_api_key: str | None = Field(default=None, alias="MEM0_API_KEY")
     mem0_project_id: str | None = Field(default=None, alias="MEM0_PROJECT_ID")
     mem0_org_id: str | None = Field(default=None, alias="MEM0_ORG_ID")

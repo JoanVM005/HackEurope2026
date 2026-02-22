@@ -125,6 +125,113 @@ Most errors use FastAPI default:
 }
 ```
 
+## Voice Intake
+
+### `POST /voice-intake/sessions`
+- Description: Create a new intake session.
+- Request body:
+```json
+{
+  "language": "en"
+}
+```
+- Response `201`:
+```json
+{
+  "session_id": "uuid",
+  "status": "collecting",
+  "updated_slots": {
+    "first_name": null,
+    "last_name": null,
+    "description": null,
+    "time_preferences": null
+  },
+  "next_question": "What is the patient's first name?",
+  "warnings": []
+}
+```
+
+### `GET /voice-intake/sessions`
+- Description: List pending review cards for current doctor (`X-Doctor-Id`).
+- Response `200`:
+```json
+{
+  "sessions": [
+    {
+      "session_id": "uuid",
+      "status": "pending_review",
+      "created_at": "2026-02-22T10:00:00+00:00",
+      "updated_at": "2026-02-22T10:05:00+00:00",
+      "extracted_data": {
+        "first_name": "Laura",
+        "last_name": "Gomez",
+        "description": "Persistent chest pain",
+        "time_preferences": "Morning"
+      },
+      "pdf_url": "https://...",
+      "warnings": []
+    }
+  ]
+}
+```
+
+### `POST /voice-intake/sessions/{session_id}/transcribe`
+- Description: Transcribe one audio segment using ElevenLabs.
+- Request: `multipart/form-data` with `audio_file`.
+- Response `200`:
+```json
+{
+  "transcript": "Morning after 15:00",
+  "confidence": 0.91,
+  "provider": "elevenlabs",
+  "warnings": []
+}
+```
+
+### `POST /voice-intake/sessions/{session_id}/turn`
+- Description: Process one transcript chunk and advance slot-filling state.
+- Request body:
+```json
+{
+  "client_turn_id": "uuid",
+  "transcript_chunk": "The last name is Gomez",
+  "source": "voice",
+  "stt_confidence": 0.88
+}
+```
+- Response `200`: `VoiceTurnResponse` (updated slots, next question, status).
+
+### `POST /voice-intake/sessions/{session_id}/finalize`
+- Description: Build pending-review payload + transcript PDF + task and priority suggestions.
+- Request body:
+```json
+{
+  "final_confirmation": "ui_confirm",
+  "regenerate_pdf": false
+}
+```
+- Response `200`: `VoicePendingReviewPayload`.
+
+### `POST /voice-intake/sessions/{session_id}/confirm`
+- Description: Doctor-reviewed payload to create real patient + tasks.
+- Request body:
+```json
+{
+  "first_name": "Laura",
+  "last_name": "Gomez",
+  "description": "Persistent chest pain",
+  "time_preferences": "Morning",
+  "admitted_at": "2026-02-22T10:25:00Z",
+  "priority_final": 4,
+  "priority_suggested": 4,
+  "confidence": 0.82,
+  "model_reason": "Operational urgency",
+  "override_reason": null,
+  "selected_task_definition_ids": ["uuid"]
+}
+```
+- Response `200`: `VoiceConfirmResponse`.
+
 ## Task Definitions
 
 ### `POST /task-definitions`
