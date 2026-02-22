@@ -32,11 +32,16 @@ Most errors use FastAPI default:
 - Request body:
 ```json
 {
-  "patient_id": "P-001",
+  "patient_id": 1051,
   "first_name": "Elena",
   "last_name": "Ruiz",
   "description": "Severity: critical",
   "time_preferences": "pref_time=morning; avoid=late_evening",
+  "priority_final": 4,
+  "priority_suggested": 4,
+  "model_reason": "Shortness of breath noted; recent admission.",
+  "confidence": 0.72,
+  "override_reason": null,
   "admitted_at": "2026-02-21T08:00:00Z"
 }
 ```
@@ -44,11 +49,16 @@ Most errors use FastAPI default:
 ```json
 {
   "id": "uuid",
-  "patient_id": "P-001",
+  "patient_id": 1051,
   "first_name": "Elena",
   "last_name": "Ruiz",
   "description": "Severity: critical",
   "time_preferences": "pref_time=morning; avoid=late_evening",
+  "priority_final": 4,
+  "priority_suggested": 4,
+  "model_reason": "Shortness of breath noted; recent admission.",
+  "confidence": 0.72,
+  "override_reason": null,
   "admitted_at": "2026-02-21T08:00:00+00:00",
   "created_at": "2026-02-21T09:00:00+00:00",
   "updated_at": "2026-02-21T09:00:00+00:00"
@@ -80,6 +90,8 @@ Most errors use FastAPI default:
   "last_name": "Ruiz",
   "description": "Updated",
   "time_preferences": "pref_time=afternoon; avoid=08:00-10:00",
+  "priority_final": 5,
+  "override_reason": "Doctor judgement: unstable presentation.",
   "admitted_at": "2026-02-21T08:30:00Z"
 }
 ```
@@ -90,6 +102,28 @@ Most errors use FastAPI default:
 - Description: Delete patient by external `patient_id`.
 - Response `204`: empty body.
 - Errors: `404`, `502`.
+
+### `POST /patients/priority-preview`
+- Description: Preview LLM priority before saving patient.
+- Request body:
+```json
+{
+  "first_name": "Elena",
+  "last_name": "Ruiz",
+  "description": "Severity: critical",
+  "time_preferences": "prefers mornings, avoid late afternoons",
+  "admitted_at": "2026-02-21T08:00:00Z",
+  "task_names": ["ECG", "Blood test"]
+}
+```
+- Response `200`:
+```json
+{
+  "suggested_priority": 4,
+  "confidence": 0.72,
+  "model_reason": "Shortness of breath noted; recent admission."
+}
+```
 
 ## Task Definitions
 
