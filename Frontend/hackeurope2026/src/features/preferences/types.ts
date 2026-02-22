@@ -16,6 +16,7 @@ export interface PriorityOverrideRule {
 export interface ScoringWeights {
   w_priority: number
   w_wait: number
+  w_time_pref: number
 }
 
 export interface ExplanationPreferences {

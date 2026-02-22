@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import re
+from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Callable
 from uuid import UUID
@@ -32,10 +33,39 @@ class PlannerValidationError(Exception):
     """Raised when planner input cannot be satisfied."""
 
 
+@dataclass(frozen=True)
+class PatientTimePreferenceProfile:
+    preferred_ranges: tuple[tuple[int, int], ...] = ()
+    avoid_ranges: tuple[tuple[int, int], ...] = ()
+    ignored_tokens: int = 0
+
+    @property
+    def has_bias(self) -> bool:
+        return bool(self.preferred_ranges or self.avoid_ranges)
+
+
 class PlannerService:
     START_HOUR = 9
     END_HOUR = 21
     MAX_LOOKAHEAD_DAYS = 30
+    TIME_WINDOW_PATTERN = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)\s*-\s*([01]\d|2[0-3]):([0-5]\d)$")
+    PREFERRED_KEYS = {
+        "",
+        "pref_time",
+        "prefer_time",
+        "preferred_time",
+        "time_pref",
+        "preference",
+        "preferred",
+    }
+    AVOID_KEYS = {"avoid", "avoid_time", "avoid_times", "blocked", "block"}
+    NAMED_TIME_WINDOWS: dict[str, tuple[tuple[int, int], ...]] = {
+        "morning": ((9 * 60, 12 * 60),),
+        "midday": ((12 * 60, 15 * 60),),
+        "afternoon": ((15 * 60, 18 * 60),),
+        "evening": ((18 * 60, 21 * 60),),
+        "late_evening": ((20 * 60, 21 * 60),),
+    }
 
     def __init__(
         self,
@@ -324,6 +354,160 @@ class PlannerService:
         final_priority = max(1, min(5, max_override))
         return final_priority, final_priority != llm_priority
 
+    def _parse_time_window(self, token: str) -> tuple[int, int] | None:
+        match = self.TIME_WINDOW_PATTERN.fullmatch(token)
+        if not match:
+            return None
+        start_hour, start_minute, end_hour, end_minute = match.groups()
+        start_minutes = int(start_hour) * 60 + int(start_minute)
+        end_minutes = int(end_hour) * 60 + int(end_minute)
+        if start_minutes >= end_minutes:
+            return None
+        return start_minutes, end_minutes
+
+    def _decode_time_preference_token(
+        self,
+        token: str,
+    ) -> tuple[tuple[tuple[int, int], ...] | None, bool]:
+        cleaned = token.strip().lower()
+        if not cleaned:
+            return None, False
+
+        parsed_window = self._parse_time_window(cleaned)
+        if parsed_window is not None:
+            return (parsed_window,), False
+
+        normalized = re.sub(r"\s+", "_", cleaned).replace("-", "_")
+        if normalized == "flexible":
+            return None, True
+        if normalized in self.NAMED_TIME_WINDOWS:
+            return self.NAMED_TIME_WINDOWS[normalized], False
+
+        return None, False
+
+    def _parse_patient_time_preferences(self, raw_preferences: str | None) -> PatientTimePreferenceProfile:
+        if raw_preferences is None:
+            return PatientTimePreferenceProfile()
+
+        cleaned_preferences = raw_preferences.strip()
+        if not cleaned_preferences:
+            return PatientTimePreferenceProfile()
+
+        preferred_ranges: list[tuple[int, int]] = []
+        avoid_ranges: list[tuple[int, int]] = []
+        ignored_tokens = 0
+
+        segments = [segment.strip() for segment in cleaned_preferences.split(";") if segment.strip()]
+        if not segments:
+            segments = [cleaned_preferences]
+
+        for segment in segments:
+            key = ""
+            raw_values = segment
+            if "=" in segment:
+                key_part, raw_values = segment.split("=", 1)
+                key = key_part.strip().lower()
+
+            tokens = [token.strip() for token in re.split(r"[,\|]", raw_values) if token.strip()]
+            if not tokens:
+                continue
+
+            if key in self.PREFERRED_KEYS:
+                target = "preferred"
+            elif key in self.AVOID_KEYS:
+                target = "avoid"
+            else:
+                ignored_tokens += len(tokens)
+                continue
+
+            for token in tokens:
+                decoded_ranges, is_flexible = self._decode_time_preference_token(token)
+                if is_flexible and target == "preferred":
+                    preferred_ranges.clear()
+                    continue
+                if decoded_ranges is None:
+                    ignored_tokens += 1
+                    continue
+                if target == "preferred":
+                    preferred_ranges.extend(decoded_ranges)
+                else:
+                    avoid_ranges.extend(decoded_ranges)
+
+        return PatientTimePreferenceProfile(
+            preferred_ranges=tuple(preferred_ranges),
+            avoid_ranges=tuple(avoid_ranges),
+            ignored_tokens=ignored_tokens,
+        )
+
+    def _profile_from_llm_normalization(self, normalization: object) -> PatientTimePreferenceProfile:
+        preferred_ranges: list[tuple[int, int]] = []
+        avoid_ranges: list[tuple[int, int]] = []
+
+        preferred_windows = getattr(normalization, "preferred_windows", [])
+        avoid_windows = getattr(normalization, "avoid_windows", [])
+
+        for window in preferred_windows:
+            start = getattr(window, "start", None)
+            end = getattr(window, "end", None)
+            if not isinstance(start, str) or not isinstance(end, str):
+                continue
+            parsed = self._parse_time_window(f"{start}-{end}")
+            if parsed is not None:
+                preferred_ranges.append(parsed)
+
+        for window in avoid_windows:
+            start = getattr(window, "start", None)
+            end = getattr(window, "end", None)
+            if not isinstance(start, str) or not isinstance(end, str):
+                continue
+            parsed = self._parse_time_window(f"{start}-{end}")
+            if parsed is not None:
+                avoid_ranges.append(parsed)
+
+        return PatientTimePreferenceProfile(
+            preferred_ranges=tuple(preferred_ranges),
+            avoid_ranges=tuple(avoid_ranges),
+            ignored_tokens=0,
+        )
+
+    def _resolve_patient_time_preferences(
+        self,
+        raw_preferences: str | None,
+        warnings: set[str],
+    ) -> tuple[PatientTimePreferenceProfile, bool]:
+        deterministic_profile = self._parse_patient_time_preferences(raw_preferences)
+        cleaned = (raw_preferences or "").strip()
+        if not cleaned:
+            return deterministic_profile, False
+        if deterministic_profile.has_bias:
+            return deterministic_profile, False
+
+        llm_normalized = self._llm_client.normalize_time_preferences(cleaned)
+        if llm_normalized is None:
+            if deterministic_profile.ignored_tokens > 0:
+                warnings.add("time_pref_llm_normalization_unavailable")
+            return deterministic_profile, False
+
+        llm_profile = self._profile_from_llm_normalization(llm_normalized)
+        if llm_profile.has_bias:
+            return llm_profile, True
+
+        if deterministic_profile.ignored_tokens > 0:
+            warnings.add("time_pref_llm_no_match")
+        return deterministic_profile, False
+
+    @staticmethod
+    def _minute_is_in_ranges(minute_of_day: int, ranges: tuple[tuple[int, int], ...]) -> bool:
+        return any(start <= minute_of_day < end for start, end in ranges)
+
+    def _time_preference_penalty(self, hour: int, profile: PatientTimePreferenceProfile) -> float:
+        slot_minutes = hour * 60
+        if profile.avoid_ranges and self._minute_is_in_ranges(slot_minutes, profile.avoid_ranges):
+            return 2.0
+        if profile.preferred_ranges and self._minute_is_in_ranges(slot_minutes, profile.preferred_ranges):
+            return 0.0
+        return 1.0
+
     def _allocate_slot(
         self,
         patient_uuid: UUID,
@@ -333,8 +517,13 @@ class PlannerService:
         patient_busy: set[tuple[UUID, date, int]],
         task_busy: set[tuple[UUID, date, int]],
         time_blocks: list[TimeBlock],
-    ) -> tuple[date, int, bool]:
-        blocked_shift_used = False
+        time_preference_profile: PatientTimePreferenceProfile,
+        w_time_pref: float,
+    ) -> tuple[date, int, bool, bool]:
+        use_time_preference_bias = w_time_pref > 0 and time_preference_profile.has_bias
+        best_candidate: tuple[float, int, int, date, int] | None = None
+        blocked_orders: list[tuple[int, int]] = []
+
         for day_offset in range(self.MAX_LOOKAHEAD_DAYS + 1):
             current_date = preferred_date + timedelta(days=day_offset)
             if day_offset == 0:
@@ -345,9 +534,9 @@ class PlannerService:
             else:
                 hours = list(range(self.START_HOUR, self.END_HOUR + 1))
 
-            for hour in hours:
+            for hour_index, hour in enumerate(hours):
                 if self._is_hour_blocked(hour, time_blocks):
-                    blocked_shift_used = True
+                    blocked_orders.append((day_offset, hour_index))
                     continue
 
                 patient_key = (patient_uuid, current_date, hour)
@@ -357,13 +546,30 @@ class PlannerService:
                 if task_key in task_busy:
                     continue
 
-                patient_busy.add(patient_key)
-                task_busy.add(task_key)
-                return current_date, hour, blocked_shift_used
+                slot_cost = float(day_offset * 100 + hour_index)
+                if use_time_preference_bias:
+                    pref_penalty = self._time_preference_penalty(hour, time_preference_profile)
+                    slot_cost += w_time_pref * 10.0 * pref_penalty
 
-        raise PlannerValidationError(
-            "No available slot found within lookahead window for scheduling constraints"
+                candidate = (slot_cost, day_offset, hour_index, current_date, hour)
+                if best_candidate is None or candidate < best_candidate:
+                    best_candidate = candidate
+
+        if best_candidate is None:
+            raise PlannerValidationError(
+                "No available slot found within lookahead window for scheduling constraints"
+            )
+
+        _, _, _, selected_date, selected_hour = best_candidate
+        _, selected_day_offset, selected_hour_index, _, _ = best_candidate
+        blocked_shift_used = any(
+            (blocked_day_offset, blocked_hour_index) < (selected_day_offset, selected_hour_index)
+            for blocked_day_offset, blocked_hour_index in blocked_orders
         )
+        patient_busy.add((patient_uuid, selected_date, selected_hour))
+        task_busy.add((task_definition_id, selected_date, selected_hour))
+        return selected_date, selected_hour, blocked_shift_used, use_time_preference_bias
+
 
     def replan_and_sync(self, doctor_id: str | None = None) -> SchedulePlanResponse:
         now_utc = self._now_provider()
@@ -377,10 +583,32 @@ class PlannerService:
 
         overrides_applied_count = 0
         time_block_shift_count = 0
+        time_pref_tokens_ignored_count = 0
+        time_pref_bias_applied_count = 0
+        time_pref_llm_normalized_count = 0
+        time_preference_profile_cache: dict[str, tuple[PatientTimePreferenceProfile, bool]] = {}
 
         candidate_items: list[dict[str, object]] = []
         for patient_external_id in sorted(contexts):
             context = contexts[patient_external_id]
+            preference_cache_key = (context.time_preferences or "").strip()
+            if preference_cache_key in time_preference_profile_cache:
+                time_preference_profile, used_llm_for_time_pref = time_preference_profile_cache[
+                    preference_cache_key
+                ]
+            else:
+                time_preference_profile, used_llm_for_time_pref = self._resolve_patient_time_preferences(
+                    context.time_preferences,
+                    warning_codes,
+                )
+                time_preference_profile_cache[preference_cache_key] = (
+                    time_preference_profile,
+                    used_llm_for_time_pref,
+                )
+
+            time_pref_tokens_ignored_count += time_preference_profile.ignored_tokens
+            if used_llm_for_time_pref:
+                time_pref_llm_normalized_count += 1
             for task in context.tasks:
                 context_hash = self._build_context_hash(
                     patient_description=context.description,
@@ -432,6 +660,7 @@ class PlannerService:
                         "priority": effective_priority,
                         "priority_score": score,
                         "reason": reason,
+                        "time_preference_profile": time_preference_profile,
                     }
                 )
 
@@ -463,7 +692,7 @@ class PlannerService:
 
         planned_rows: list[dict[str, object]] = []
         for item in candidate_items:
-            allocated_date, allocated_hour, blocked_shift_used = self._allocate_slot(
+            allocated_date, allocated_hour, blocked_shift_used, time_pref_bias_applied = self._allocate_slot(
                 patient_uuid=item["patient_uuid"],
                 task_definition_id=item["task_definition_id"],
                 preferred_date=item["preferred_date"],
@@ -471,9 +700,13 @@ class PlannerService:
                 patient_busy=patient_busy,
                 task_busy=task_busy,
                 time_blocks=preferences.time_blocks,
+                time_preference_profile=item["time_preference_profile"],
+                w_time_pref=preferences.scoring_weights.w_time_pref,
             )
             if blocked_shift_used:
                 time_block_shift_count += 1
+            if time_pref_bias_applied:
+                time_pref_bias_applied_count += 1
             scheduled_for = self._schedule_datetime(allocated_date, allocated_hour)
             planned_rows.append(
                 {
@@ -485,6 +718,12 @@ class PlannerService:
 
         if time_block_shift_count > 0:
             warning_codes.add(f"time_block_shifts:{time_block_shift_count}")
+        if time_pref_tokens_ignored_count > 0:
+            warning_codes.add(f"time_pref_tokens_ignored:{time_pref_tokens_ignored_count}")
+        if time_pref_bias_applied_count > 0:
+            warning_codes.add(f"time_pref_bias_applied_count:{time_pref_bias_applied_count}")
+        if time_pref_llm_normalized_count > 0:
+            warning_codes.add(f"time_pref_llm_normalized_count:{time_pref_llm_normalized_count}")
 
         for cache_update in pending_cache_updates:
             self._repository.update_patient_task_llm_cache(cache_update)

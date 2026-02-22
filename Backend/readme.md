@@ -140,7 +140,7 @@ Response shape for `POST /schedule` and `GET /schedule`:
     "source": "mem0",
     "time_blocks_count": 1,
     "overrides_applied_count": 2,
-    "scoring_weights": { "w_priority": 10, "w_wait": 0.05 },
+    "scoring_weights": { "w_priority": 10, "w_wait": 0.05, "w_time_pref": 0.05 },
     "language": "es"
   },
   "warnings": []
@@ -151,6 +151,7 @@ Response shape for `POST /schedule` and `GET /schedule`:
 - `GET /preferences` (reads from Mem0, or defaults when unavailable/no memory)
 - `POST /preferences` (upsert doctor preferences into Mem0)
 - `priority_overrides` are evaluated against patient description text.
+- `scoring_weights.w_time_pref` applies a low-impact bias from each patient's `time_preferences` text (`0.00` to `0.20`).
 
 Both endpoints read `X-Doctor-Id` header (fallback: `DEFAULT_DOCTOR_ID`).
 
@@ -163,14 +164,19 @@ Both endpoints read `X-Doctor-Id` header (fallback: `DEFAULT_DOCTOR_ID`).
    - `reason = "fallback"`
 4. Deterministic score:
    - `waiting_minutes = max(0, now_utc - admitted_at)`
-   - `score = priority * 10 + waiting_minutes * 0.05`
+   - `score = priority * w_priority + waiting_minutes * w_wait`
 5. Final ordering always uses deterministic score.
-6. Constraints:
+6. Slot allocation uses soft patient time preference bias:
+   - `slot_cost = day_offset * 100 + hour_index + (w_time_pref * 10 * pref_penalty)`
+   - `pref_penalty = 0` (preferred window), `1` (neutral), `2` (avoid window)
+   - weight is intentionally low and configurable in `/preferences`.
+   - parser first uses deterministic rules; if no valid match is found, it can fallback to LLM normalization of free text (for example `9-12`).
+7. Constraints:
    - A patient cannot have more than one task in the same hour.
    - Two patients cannot have the same task at the same hour.
-7. Planning always allocates from 09:00 forward to 21:00; overflow continues on following days.
-8. LLM output is cached per `patient_task` and reused when context is unchanged.
-9. Persistence uses a diff-based sync over future slots to avoid full reinsertion.
+8. Planning always allocates from 09:00 forward to 21:00; overflow continues on following days.
+9. LLM output is cached per `patient_task` and reused when context is unchanged.
+10. Persistence uses a diff-based sync over future slots to avoid full reinsertion.
 
 ## API Contract Reference
 See:

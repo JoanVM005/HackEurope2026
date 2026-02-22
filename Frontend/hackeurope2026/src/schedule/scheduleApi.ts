@@ -31,6 +31,7 @@ interface AppliedPreferencesSummaryDto {
   scoring_weights: {
     w_priority: number
     w_wait: number
+    w_time_pref: number
   }
   language: 'es' | 'en'
 }
@@ -58,6 +59,7 @@ export interface AppliedPreferencesSummary {
   scoringWeights: {
     wPriority: number
     wWait: number
+    wTimePref: number
   }
   language: 'es' | 'en'
 }
@@ -92,6 +94,7 @@ function mapAppliedPreferences(
     scoringWeights: {
       wPriority: dto.scoring_weights.w_priority,
       wWait: dto.scoring_weights.w_wait,
+      wTimePref: dto.scoring_weights.w_time_pref,
     },
     language: dto.language,
   }

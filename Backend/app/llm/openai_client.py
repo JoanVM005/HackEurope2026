@@ -10,7 +10,7 @@ from openai import APIConnectionError, APIError, APITimeoutError, BadRequestErro
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.config import get_settings
-from app.models.schemas import LlmPriorityResult
+from app.models.schemas import LlmPriorityResult, LlmTimePreferenceNormalization
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,40 @@ PRIORITY_SCHEMA: dict[str, Any] = {
         "reason": {"type": "string", "minLength": 1, "maxLength": 200},
     },
     "required": ["priority", "confidence", "reason"],
+    "additionalProperties": False,
+}
+
+TIME_PREFERENCE_NORMALIZATION_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "preferred_windows": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "start": {"type": "string", "pattern": r"^([01]\d|2[0-3]):[0-5]\d$"},
+                    "end": {"type": "string", "pattern": r"^([01]\d|2[0-3]):[0-5]\d$"},
+                },
+                "required": ["start", "end"],
+                "additionalProperties": False,
+            },
+        },
+        "avoid_windows": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "start": {"type": "string", "pattern": r"^([01]\d|2[0-3]):[0-5]\d$"},
+                    "end": {"type": "string", "pattern": r"^([01]\d|2[0-3]):[0-5]\d$"},
+                },
+                "required": ["start", "end"],
+                "additionalProperties": False,
+            },
+        },
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 200},
+    },
+    "required": ["preferred_windows", "avoid_windows", "confidence", "reason"],
     "additionalProperties": False,
 }
 
@@ -41,9 +75,20 @@ SYSTEM_PROMPT = (
     "Reason must be concise, concrete, and <=200 chars."
 )
 
+TIME_PREFERENCE_SYSTEM_PROMPT = (
+    "You normalize free-text patient time preferences into concrete scheduling windows. "
+    "Return strictly one JSON object matching the schema. "
+    "Do not infer medical facts. "
+    "Map natural language and shorthand times into 24h HH:MM ranges. "
+    "Interpret examples such as '9-12', '9am-12pm', 'mornings', 'after lunch'. "
+    "Use only ranges within 09:00-21:00, clipping if needed. "
+    "If text is ambiguous, keep arrays empty and lower confidence."
+)
+
 MAX_PATIENT_DESCRIPTION_CHARS = 2_000
 MAX_TASK_TITLE_CHARS = 180
 MAX_TASK_DETAILS_CHARS = 2_000
+MAX_TIME_PREFERENCE_TEXT_CHARS = 1_000
 
 
 class LlmServiceError(Exception):
@@ -217,6 +262,19 @@ class OpenAIPlannerClient:
             raise LlmServiceError("OpenAI returned empty output")
         return LlmPriorityResult.model_validate(self._safe_json_loads(output_text))
 
+    def _parse_time_preference_response_payload(
+        self,
+        response: Any,
+    ) -> LlmTimePreferenceNormalization:
+        parsed = self._extract_parsed_json(response)
+        if isinstance(parsed, dict):
+            return LlmTimePreferenceNormalization.model_validate(parsed)
+
+        output_text = self._extract_output_text(response)
+        if not output_text:
+            raise LlmServiceError("OpenAI returned empty output")
+        return LlmTimePreferenceNormalization.model_validate(self._safe_json_loads(output_text))
+
     def _request_structured_output(
         self,
         patient_description: str,
@@ -272,6 +330,56 @@ class OpenAIPlannerClient:
         )
         return self._parse_response_payload(response)
 
+    def _build_time_preference_user_prompt(self, raw_time_preferences: str) -> str:
+        normalized = self._sanitize_text(raw_time_preferences, MAX_TIME_PREFERENCE_TEXT_CHARS)
+        return (
+            "Normalize this patient time-preference text for scheduling.\n"
+            "Output windows as preferred or avoid ranges.\n"
+            f"Raw text: {normalized}\n"
+            "Return JSON only."
+        )
+
+    def _request_time_preference_structured_output(
+        self,
+        raw_time_preferences: str,
+    ) -> LlmTimePreferenceNormalization:
+        response = self._responses_create(
+            model=self._model,
+            input=[
+                {"role": "system", "content": TIME_PREFERENCE_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": self._build_time_preference_user_prompt(raw_time_preferences),
+                },
+            ],
+            text={
+                "format": {
+                    "type": "json_schema",
+                    "name": "time_preference_normalization",
+                    "schema": TIME_PREFERENCE_NORMALIZATION_SCHEMA,
+                    "strict": True,
+                }
+            },
+        )
+        return self._parse_time_preference_response_payload(response)
+
+    def _request_time_preference_json_mode(
+        self,
+        raw_time_preferences: str,
+    ) -> LlmTimePreferenceNormalization:
+        response = self._responses_create(
+            model=self._model,
+            input=[
+                {"role": "system", "content": TIME_PREFERENCE_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": self._build_time_preference_user_prompt(raw_time_preferences),
+                },
+            ],
+            text={"format": {"type": "json_object"}},
+        )
+        return self._parse_time_preference_response_payload(response)
+
     def estimate_priority(
         self,
         patient_description: str,
@@ -320,6 +428,33 @@ class OpenAIPlannerClient:
             task_title=task_title,
             task_details=details,
         )
+
+    def normalize_time_preferences(
+        self,
+        raw_time_preferences: str,
+    ) -> LlmTimePreferenceNormalization | None:
+        cleaned = raw_time_preferences.strip()
+        if not cleaned:
+            return None
+
+        try:
+            return self._request_time_preference_structured_output(cleaned)
+        except BadRequestError as exc:
+            logger.warning(
+                "Time-preference structured output rejected; falling back to JSON mode",
+                exc_info=exc,
+            )
+        except (LlmServiceError, APIError, ValueError, json.JSONDecodeError) as exc:
+            logger.warning(
+                "Time-preference structured output parsing failed; trying JSON mode",
+                exc_info=exc,
+            )
+
+        try:
+            return self._request_time_preference_json_mode(cleaned)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Time-preference LLM normalization failed", exc_info=exc)
+            return None
 
 
 @lru_cache(maxsize=8)

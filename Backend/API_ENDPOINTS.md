@@ -247,7 +247,7 @@ Most errors use FastAPI default:
     "source": "mem0",
     "time_blocks_count": 1,
     "overrides_applied_count": 2,
-    "scoring_weights": { "w_priority": 10, "w_wait": 0.05 },
+    "scoring_weights": { "w_priority": 10, "w_wait": 0.05, "w_time_pref": 0.05 },
     "language": "es"
   },
   "warnings": []
@@ -282,7 +282,7 @@ Most errors use FastAPI default:
   "preferences": {
     "time_blocks": [{ "start": "13:00", "end": "14:00" }],
     "priority_overrides": [{ "match_type": "contains", "pattern": "K+", "priority": 5, "enabled": true }],
-    "scoring_weights": { "w_priority": 10, "w_wait": 0.05 },
+    "scoring_weights": { "w_priority": 10, "w_wait": 0.05, "w_time_pref": 0.05 },
     "language": "es",
     "explanations": { "include_reason": true, "include_formula": false }
   },
@@ -293,6 +293,8 @@ Most errors use FastAPI default:
 ### `POST /preferences`
 - Description: Upsert planner preferences for a doctor.
 - Behavior note: `priority_overrides` match against the **patient description** (not task name).
+- Behavior note: `scoring_weights.w_time_pref` is a low-impact patient `time_preferences` bias (`0.00` to `0.20`).
+- Behavior note: the planner parses `time_preferences` deterministically first, then can fallback to LLM normalization for free text like `9-12`.
 - Header:
   - `X-Doctor-Id` (optional, fallback to `DEFAULT_DOCTOR_ID`)
 - Request body (partial update supported):
@@ -300,7 +302,7 @@ Most errors use FastAPI default:
 {
   "time_blocks": [{ "start": "13:00", "end": "14:00" }],
   "priority_overrides": [{ "match_type": "regex", "pattern": "\\bECG\\b", "priority": 4, "enabled": true }],
-  "scoring_weights": { "w_priority": 12, "w_wait": 0.04 },
+  "scoring_weights": { "w_priority": 12, "w_wait": 0.04, "w_time_pref": 0.10 },
   "language": "es",
   "explanations": { "include_reason": true, "include_formula": false }
 }

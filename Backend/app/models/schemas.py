@@ -207,6 +207,29 @@ class LlmPriorityResult(BaseSchema):
     reason: str = Field(min_length=1, max_length=200)
 
 
+class TimePreferenceWindow(BaseSchema):
+    start: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    end: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+
+    @staticmethod
+    def _to_minutes(value: str) -> int:
+        hour, minute = value.split(":", 1)
+        return int(hour) * 60 + int(minute)
+
+    @model_validator(mode="after")
+    def validate_range(self) -> "TimePreferenceWindow":
+        if self._to_minutes(self.start) >= self._to_minutes(self.end):
+            raise ValueError("time window start must be before end")
+        return self
+
+
+class LlmTimePreferenceNormalization(BaseSchema):
+    preferred_windows: list[TimePreferenceWindow] = Field(default_factory=list)
+    avoid_windows: list[TimePreferenceWindow] = Field(default_factory=list)
+    confidence: float = Field(default=0.0, ge=0, le=1)
+    reason: str = Field(default="fallback", min_length=1, max_length=200)
+
+
 class PlannedScheduleItem(BaseSchema):
     schedule_item_id: UUID
     task_name: str

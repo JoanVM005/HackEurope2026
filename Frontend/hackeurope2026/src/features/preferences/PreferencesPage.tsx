@@ -14,6 +14,7 @@ const DEFAULT_PREFERENCES: PlannerPreferences = {
   scoring_weights: {
     w_priority: 10,
     w_wait: 0.05,
+    w_time_pref: 0.05,
   },
   language: 'en',
   explanations: {
@@ -246,7 +247,7 @@ export default function PreferencesPage() {
           <section className="preferences-card preferences-card--compact">
             <h2>Scoring</h2>
             <p className="preferences-card__description">
-              Controls how much priority and waiting time affect final score.
+              Controls how much priority and waiting time affect final score, plus a low impact patient time preference bias.
             </p>
             <div className="preferences-row">
               <label>
@@ -282,6 +283,25 @@ export default function PreferencesPage() {
                       scoring_weights: {
                         ...current.scoring_weights,
                         w_wait: Number(event.target.value),
+                      },
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                w_time_pref
+                <input
+                  type="number"
+                  min={0}
+                  max={0.2}
+                  step={0.01}
+                  value={preferences.scoring_weights.w_time_pref}
+                  onChange={(event) =>
+                    setPreferences((current) => ({
+                      ...current,
+                      scoring_weights: {
+                        ...current.scoring_weights,
+                        w_time_pref: Number(event.target.value),
                       },
                     }))
                   }

@@ -59,6 +59,7 @@ class PriorityOverrideRule(BasePreferenceSchema):
 class ScoringWeights(BasePreferenceSchema):
     w_priority: float = Field(default=10.0, ge=1.0, le=20.0)
     w_wait: float = Field(default=0.05, ge=0.0, le=1.0)
+    w_time_pref: float = Field(default=0.05, ge=0.0, le=0.2)
 
 
 class ExplanationPreferences(BasePreferenceSchema):

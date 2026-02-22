@@ -300,7 +300,8 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
             Overrides applied: {lastReplan.appliedPreferences.overridesAppliedCount} · Blocked ranges:{' '}
             {lastReplan.appliedPreferences.timeBlocksCount} · Weights: w_priority=
             {lastReplan.appliedPreferences.scoringWeights.wPriority}, w_wait=
-            {lastReplan.appliedPreferences.scoringWeights.wWait}
+            {lastReplan.appliedPreferences.scoringWeights.wWait}, w_time_pref=
+            {lastReplan.appliedPreferences.scoringWeights.wTimePref}
           </p>
           {lastReplan.warnings.length > 0 ? <p>Warnings: {lastReplan.warnings.join(' · ')}</p> : null}
           <p>Header doctor id: {getDoctorId()}</p>
