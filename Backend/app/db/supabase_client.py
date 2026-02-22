@@ -139,6 +139,7 @@ class SupabaseRepository:
             "first_name": row.get("first_name"),
             "last_name": row.get("last_name"),
             "description": row.get("description"),
+            "time_preferences": row.get("time_preferences"),
             "admitted_at": row.get("admitted_at"),
             "created_at": row.get("created_at"),
             "updated_at": row.get("updated_at"),

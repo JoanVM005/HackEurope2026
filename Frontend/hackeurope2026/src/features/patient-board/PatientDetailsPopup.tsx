@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import LoadingOverlay from '../../components/loading-overlay/LoadingOverlay'
 import {
   createPatientTask,
   listPatientTasksByStatus,
@@ -346,14 +347,7 @@ function PatientDetailsPopupContent({
           </div>
         </footer>
       </section>
-      {isSaving ? (
-        <div className="patient-board__loading-overlay" role="status" aria-live="polite">
-          <div className="patient-board__loading-modal">
-            <span className="patient-board__loading-spinner" aria-hidden />
-            <p>Saving patient...</p>
-          </div>
-        </div>
-      ) : null}
+      <LoadingOverlay open={isSaving} message="Saving patient..." ariaLabel="Saving patient" />
     </>
   )
 }
