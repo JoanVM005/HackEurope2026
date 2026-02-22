@@ -32,6 +32,11 @@ class TaskStatus(str, Enum):
     cancelled = "cancelled"
 
 
+class ScheduleItemStatus(str, Enum):
+    pending = "pending"
+    completed = "completed"
+
+
 class PatientCreate(BaseSchema):
     patient_id: int = Field(ge=1)
     first_name: str = Field(min_length=1, max_length=100)
@@ -196,6 +201,8 @@ class ScheduleItemResponse(BaseSchema):
     source_patient_task_id: Optional[UUID] = None
     task_name: str
     scheduled_for: datetime
+    status: ScheduleItemStatus = ScheduleItemStatus.pending
+    completed_at: Optional[datetime] = None
     priority: int = Field(ge=1, le=5)
     score: float = Field(ge=0)
     created_at: datetime
@@ -238,6 +245,80 @@ class PlannedScheduleItem(BaseSchema):
     hour: int = Field(ge=9, le=21)
     priority_score: float = Field(ge=0)
     reason: str = Field(min_length=1, max_length=200)
+    status: ScheduleItemStatus = ScheduleItemStatus.pending
+    source_patient_task_id: Optional[UUID] = None
+
+
+class ScheduleCompleteRequest(BaseSchema):
+    schedule_item_ids: list[UUID] = Field(min_length=1)
+
+
+class ScheduleCompleteResponse(BaseSchema):
+    completed_ids: list[UUID] = Field(default_factory=list)
+    skipped_ids: list[UUID] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ScheduleRescheduleOption(BaseSchema):
+    scheduled_for: datetime
+    day: date
+    hour: int = Field(ge=9, le=21)
+
+
+class ScheduleRescheduleOptionsResponse(BaseSchema):
+    schedule_item_id: UUID
+    options: list[ScheduleRescheduleOption] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ScheduleRescheduleRequest(BaseSchema):
+    scheduled_for: datetime
+
+    @field_validator("scheduled_for", mode="before")
+    @classmethod
+    def normalize_scheduled_for(cls, value: datetime | str) -> datetime:
+        normalized = _normalize_datetime(value)
+        if normalized is None:
+            raise ValueError("scheduled_for is required")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_hour_boundary(self) -> "ScheduleRescheduleRequest":
+        if self.scheduled_for.minute != 0 or self.scheduled_for.second != 0 or self.scheduled_for.microsecond != 0:
+            raise ValueError("scheduled_for must be aligned to an exact hour")
+        if self.scheduled_for.hour < 9 or self.scheduled_for.hour > 21:
+            raise ValueError("scheduled_for hour must be between 09:00 and 21:00 UTC")
+        return self
+
+
+class ScheduleRescheduleResponse(BaseSchema):
+    schedule_item_id: UUID
+    scheduled_for: datetime
+    notice: str
+
+
+class RemoveFlowStartResponse(BaseSchema):
+    original_schedule_item_id: UUID
+    working_schedule_item_id: UUID
+    source_patient_task_id: UUID
+    options: list[ScheduleRescheduleOption] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class RemoveFlowApplyRequest(ScheduleRescheduleRequest):
+    pass
+
+
+class RemoveFlowApplyResponse(BaseSchema):
+    schedule_item_id: UUID
+    scheduled_for: datetime
+    notice: str
+
+
+class RemoveFlowCancelResponse(BaseSchema):
+    schedule_item_id: UUID
+    source_patient_task_id: UUID
+    notice: str
 
 
 class SchedulePlanResponse(BaseSchema):

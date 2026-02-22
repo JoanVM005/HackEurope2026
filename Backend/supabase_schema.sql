@@ -182,10 +182,32 @@ create table if not exists public.schedule_items (
   source_patient_task_id uuid references public.patient_tasks(id) on delete set null,
   task_name text not null,
   scheduled_for timestamptz not null,
+  status text not null default 'pending',
+  completed_at timestamptz,
   priority int not null check (priority between 1 and 5),
   score double precision not null check (score >= 0),
   created_at timestamptz not null default now()
 );
+
+alter table public.schedule_items
+  add column if not exists status text;
+alter table public.schedule_items
+  add column if not exists completed_at timestamptz;
+
+update public.schedule_items
+set status = 'pending'
+where status is null;
+
+alter table public.schedule_items
+  alter column status set default 'pending';
+alter table public.schedule_items
+  alter column status set not null;
+
+alter table public.schedule_items
+  drop constraint if exists chk_schedule_items_status;
+alter table public.schedule_items
+  add constraint chk_schedule_items_status
+  check (status in ('pending', 'completed'));
 
 -- Force scheduled_for aligned to exact hour (UTC-safe since timestamptz stores absolute time)
 alter table public.schedule_items
@@ -212,12 +234,14 @@ where source_patient_task_id is not null;
 -- Uniqueness constraints (NO date_trunc to avoid IMMUTABLE issue)
 drop index if exists public.uq_schedule_items_patient_hour;
 create unique index uq_schedule_items_patient_hour
-on public.schedule_items (patient_id, scheduled_for);
+on public.schedule_items (patient_id, scheduled_for)
+where status = 'pending';
 
 drop index if exists public.uq_schedule_items_task_hour;
 create unique index uq_schedule_items_task_hour
 on public.schedule_items (task_definition_id, scheduled_for)
-where task_definition_id is not null;
+where task_definition_id is not null
+  and status = 'pending';
 
 -- Minimal RLS recommendations for MVP:
 -- alter table public.patients enable row level security;

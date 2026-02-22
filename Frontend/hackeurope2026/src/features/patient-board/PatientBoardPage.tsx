@@ -207,7 +207,7 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
     }))
   }
 
-  const handleDeletePatient = async (patientExternalId: string) => {
+  const handleDeletePatient = async (patientExternalId: number) => {
     try {
       await deletePatient(patientExternalId)
       await loadData()
@@ -414,8 +414,6 @@ function PriorityReviewModal({
   isSaving,
 }: PriorityReviewModalProps) {
   if (!open || !preview) return null
-
-  const isOverride = finalPriority !== preview.suggestedPriority
 
   return (
     <>

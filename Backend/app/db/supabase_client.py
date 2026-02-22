@@ -19,7 +19,11 @@ from app.models.schemas import (
     PatientTaskUpdate,
     PatientUpdate,
     PlannerTaskContext,
+    ScheduleCompleteResponse,
+    ScheduleRescheduleOption,
+    ScheduleRescheduleOptionsResponse,
     ScheduleItemResponse,
+    ScheduleItemStatus,
     TaskDefinitionCreate,
     TaskDefinitionResponse,
     TaskDefinitionUpdate,
@@ -60,6 +64,10 @@ def get_supabase_client() -> Client:
 
 
 class SupabaseRepository:
+    SCHEDULE_START_HOUR = 9
+    SCHEDULE_END_HOUR = 21
+    RESCHEDULE_LOOKAHEAD_DAYS = 30
+
     def __init__(self, client: Client):
         self._client = client
 
@@ -199,6 +207,12 @@ class SupabaseRepository:
         reason = "manual"
         if source_task_id is not None:
             reason = reason_by_source_task_id.get(str(source_task_id), "fallback")
+        status_raw = row.get("status")
+        status_value = (
+            ScheduleItemStatus(str(status_raw))
+            if status_raw in {ScheduleItemStatus.pending.value, ScheduleItemStatus.completed.value}
+            else ScheduleItemStatus.pending
+        )
 
         return PlannedScheduleItem(
             schedule_item_id=row["id"],
@@ -208,6 +222,24 @@ class SupabaseRepository:
             hour=scheduled_for.hour,
             priority_score=float(row["score"]),
             reason=reason,
+            status=status_value,
+            source_patient_task_id=source_task_id,
+        )
+
+    def _ensure_reschedulable_schedule_item(self, schedule_item: ScheduleItemResponse) -> None:
+        if schedule_item.status != ScheduleItemStatus.pending:
+            raise ValidationError("Only pending schedule items can be rescheduled")
+        if schedule_item.source_patient_task_id is None:
+            raise ValidationError("Schedule item has no source patient task")
+        if schedule_item.task_definition_id is None:
+            raise ValidationError("Schedule item has no task definition")
+
+    def _build_reschedule_option(self, scheduled_for: datetime) -> ScheduleRescheduleOption:
+        normalized = self._normalize_utc_datetime(scheduled_for)
+        return ScheduleRescheduleOption(
+            scheduled_for=normalized,
+            day=normalized.date(),
+            hour=normalized.hour,
         )
 
     def _get_schedule_item_by_id(self, schedule_item_id: UUID) -> ScheduleItemResponse:
@@ -492,7 +524,11 @@ class SupabaseRepository:
         if not body:
             raise ValidationError("At least one field must be provided")
 
-        self.get_patient_task(patient_task_id)
+        current_task = self.get_patient_task(patient_task_id)
+        next_status = payload.status
+        if next_status is not None and current_task.status == TaskStatus.done and next_status != TaskStatus.done:
+            raise ValidationError("Completed tasks cannot be reverted")
+
         self._execute_mutation(
             self._client.table("patient_tasks")
             .update(body)
@@ -554,7 +590,9 @@ class SupabaseRepository:
         )
 
     def cancel_patient_task(self, patient_task_id: UUID) -> None:
-        self.get_patient_task(patient_task_id)
+        current_task = self.get_patient_task(patient_task_id)
+        if current_task.status == TaskStatus.done:
+            return
         self._execute_mutation(
             self._client.table("patient_tasks")
             .update({"status": TaskStatus.cancelled.value})
@@ -603,6 +641,7 @@ class SupabaseRepository:
             self._client.table("schedule_items")
             .select("*, patients(patient_id)")
             .gte("scheduled_for", from_utc.isoformat())
+            .eq("status", ScheduleItemStatus.pending.value)
             .order("scheduled_for", desc=False)
         )
         return [self._parse_schedule_row(row) for row in response.data or []]
@@ -666,7 +705,10 @@ class SupabaseRepository:
 
         query = (
             self._client.table("schedule_items")
-            .select("id,patient_id,source_patient_task_id,task_name,scheduled_for,score,patients(patient_id,first_name,last_name)")
+            .select(
+                "id,patient_id,source_patient_task_id,task_name,scheduled_for,score,status,"
+                "patients(patient_id,first_name,last_name)"
+            )
             .order("scheduled_for", desc=False)
         )
         if patient_internal_id is not None:
@@ -686,6 +728,197 @@ class SupabaseRepository:
         reason_map = self._get_reason_map_for_source_tasks(source_task_ids)
 
         return [self._build_planned_schedule_item(row, reason_map) for row in rows]
+
+    def find_schedule_item_by_source_task_id(self, source_task_id: UUID) -> ScheduleItemResponse:
+        response = self._execute(
+            self._client.table("schedule_items")
+            .select("*, patients(patient_id)")
+            .eq("source_patient_task_id", str(source_task_id))
+            .order("created_at", desc=True)
+            .limit(1)
+        )
+        row = self._first_or_none(response.data)
+        if not row:
+            raise NotFoundError(f"Schedule item for source task '{source_task_id}' not found")
+        return self._parse_schedule_row(row)
+
+    def is_slot_free_for_task_and_patient(
+        self,
+        patient_id: UUID,
+        task_definition_id: UUID,
+        scheduled_for: datetime,
+        exclude_schedule_item_id: UUID | None = None,
+    ) -> bool:
+        normalized = self._normalize_utc_datetime(scheduled_for)
+        slot_iso = normalized.isoformat()
+        exclude_id = str(exclude_schedule_item_id) if exclude_schedule_item_id is not None else None
+
+        patient_query = (
+            self._client.table("schedule_items")
+            .select("id")
+            .eq("status", ScheduleItemStatus.pending.value)
+            .eq("patient_id", str(patient_id))
+            .eq("scheduled_for", slot_iso)
+            .limit(1)
+        )
+        if exclude_id is not None:
+            patient_query = patient_query.neq("id", exclude_id)
+        patient_response = self._execute(patient_query)
+        if patient_response.data:
+            return False
+
+        task_query = (
+            self._client.table("schedule_items")
+            .select("id")
+            .eq("status", ScheduleItemStatus.pending.value)
+            .eq("task_definition_id", str(task_definition_id))
+            .eq("scheduled_for", slot_iso)
+            .limit(1)
+        )
+        if exclude_id is not None:
+            task_query = task_query.neq("id", exclude_id)
+        task_response = self._execute(task_query)
+        if task_response.data:
+            return False
+
+        return True
+
+    def list_next_reschedule_options(
+        self,
+        schedule_item_id: UUID,
+        limit: int = 3,
+    ) -> ScheduleRescheduleOptionsResponse:
+        if limit < 1:
+            raise ValidationError("limit must be >= 1")
+
+        schedule_item = self.get_schedule_item(schedule_item_id)
+        self._ensure_reschedulable_schedule_item(schedule_item)
+
+        anchor = self._normalize_utc_datetime(schedule_item.scheduled_for)
+        search_cursor = anchor + timedelta(hours=1)
+        search_limit = anchor + timedelta(days=self.RESCHEDULE_LOOKAHEAD_DAYS)
+
+        options: list[ScheduleRescheduleOption] = []
+        warnings: list[str] = []
+
+        while search_cursor <= search_limit and len(options) < limit:
+            if self.SCHEDULE_START_HOUR <= search_cursor.hour <= self.SCHEDULE_END_HOUR:
+                is_free = self.is_slot_free_for_task_and_patient(
+                    patient_id=schedule_item.patient_id,
+                    task_definition_id=schedule_item.task_definition_id,
+                    scheduled_for=search_cursor,
+                    exclude_schedule_item_id=schedule_item.id,
+                )
+                if is_free:
+                    options.append(self._build_reschedule_option(search_cursor))
+            search_cursor += timedelta(hours=1)
+
+        if len(options) < limit:
+            warnings.append("Not enough free slots were found within the lookahead window.")
+
+        return ScheduleRescheduleOptionsResponse(
+            schedule_item_id=schedule_item.id,
+            options=options,
+            warnings=warnings,
+        )
+
+    def list_three_consecutive_options(
+        self,
+        schedule_item_id: UUID,
+        anchor_scheduled_for: datetime | None = None,
+    ) -> ScheduleRescheduleOptionsResponse:
+        schedule_item = self.get_schedule_item(schedule_item_id)
+        self._ensure_reschedulable_schedule_item(schedule_item)
+        if schedule_item.task_definition_id is None:
+            raise ValidationError("Schedule item has no task definition")
+
+        anchor = self._normalize_utc_datetime(anchor_scheduled_for or schedule_item.scheduled_for)
+        search_cursor = anchor + timedelta(hours=1)
+        search_limit = anchor + timedelta(days=self.RESCHEDULE_LOOKAHEAD_DAYS)
+
+        while search_cursor <= search_limit:
+            block = [search_cursor + timedelta(hours=offset) for offset in range(3)]
+            if block[-1] > search_limit:
+                break
+
+            if not all(self.SCHEDULE_START_HOUR <= slot.hour <= self.SCHEDULE_END_HOUR for slot in block):
+                search_cursor += timedelta(hours=1)
+                continue
+
+            is_block_free = all(
+                self.is_slot_free_for_task_and_patient(
+                    patient_id=schedule_item.patient_id,
+                    task_definition_id=schedule_item.task_definition_id,
+                    scheduled_for=slot,
+                    exclude_schedule_item_id=schedule_item.id,
+                )
+                for slot in block
+            )
+            if is_block_free:
+                return ScheduleRescheduleOptionsResponse(
+                    schedule_item_id=schedule_item.id,
+                    options=[self._build_reschedule_option(slot) for slot in block],
+                    warnings=[],
+                )
+
+            search_cursor += timedelta(hours=1)
+
+        return ScheduleRescheduleOptionsResponse(
+            schedule_item_id=schedule_item.id,
+            options=[],
+            warnings=["No block of 3 consecutive free slots was found within the lookahead window."],
+        )
+
+    def complete_schedule_items(self, schedule_item_ids: list[UUID]) -> ScheduleCompleteResponse:
+        completed_ids: list[UUID] = []
+        skipped_ids: list[UUID] = []
+        warnings: list[str] = []
+
+        # Preserve order while removing duplicates.
+        unique_ids: list[UUID] = []
+        seen: set[UUID] = set()
+        for schedule_item_id in schedule_item_ids:
+            if schedule_item_id in seen:
+                continue
+            unique_ids.append(schedule_item_id)
+            seen.add(schedule_item_id)
+
+        completed_at = datetime.now(timezone.utc).isoformat()
+
+        for schedule_item_id in unique_ids:
+            schedule_item = self.get_schedule_item(schedule_item_id)
+            if schedule_item.status == ScheduleItemStatus.completed:
+                completed_ids.append(schedule_item_id)
+                continue
+            if schedule_item.source_patient_task_id is None:
+                skipped_ids.append(schedule_item_id)
+                warnings.append(
+                    f"Schedule item '{schedule_item_id}' has no source patient task and cannot be completed."
+                )
+                continue
+
+            self._execute_mutation(
+                self._client.table("patient_tasks")
+                .update({"status": TaskStatus.done.value})
+                .eq("id", str(schedule_item.source_patient_task_id))
+            )
+            self._execute_mutation(
+                self._client.table("schedule_items")
+                .update(
+                    {
+                        "status": ScheduleItemStatus.completed.value,
+                        "completed_at": completed_at,
+                    }
+                )
+                .eq("id", str(schedule_item_id))
+            )
+            completed_ids.append(schedule_item_id)
+
+        return ScheduleCompleteResponse(
+            completed_ids=completed_ids,
+            skipped_ids=skipped_ids,
+            warnings=warnings,
+        )
 
     def delete_schedule_item(self, schedule_item_id: UUID) -> None:
         self._get_schedule_item_by_id(schedule_item_id)

@@ -4,13 +4,19 @@ import type { CSSProperties } from 'react'
 import LoadingOverlay from '../components/loading-overlay/LoadingOverlay'
 import { getDoctorId } from '../lib/apiClient'
 import {
-  deleteScheduleItem,
+  applyRemoveFlow,
+  cancelTaskFromRemoveFlow,
+  completeScheduleItems,
   listScheduleByDay,
   listScheduleByPatient,
   listTaskDefinitions,
   replanSchedule,
+  ScheduleRescheduleConflictError,
+  startRemoveFlow,
   type ReplanScheduleResult,
+  type RemoveFlowStartResult,
   type ScheduleItem,
+  type ScheduleRescheduleOption,
   type ScheduleTaskDefinition,
 } from './scheduleApi'
 
@@ -19,6 +25,12 @@ type ScheduleGridProps = {
 }
 
 type FilterMode = 'day' | 'patient'
+
+type ActiveRemoveFlow = {
+  originalItem: ScheduleItem
+  sourcePatientTaskId: string
+  workingScheduleItemId: string
+}
 
 const STEP_MINUTES = 60
 const MIN_TIME = 0
@@ -49,7 +61,16 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingTasks, setIsLoadingTasks] = useState(true)
   const [isReplanning, setIsReplanning] = useState(false)
-  const [isRemovingItem, setIsRemovingItem] = useState(false)
+  const [isCompletingItems, setIsCompletingItems] = useState(false)
+  const [completingItemIds, setCompletingItemIds] = useState<Set<string>>(new Set())
+  const [activeRemoveFlow, setActiveRemoveFlow] = useState<ActiveRemoveFlow | null>(null)
+  const [isStartingRemoveFlow, setIsStartingRemoveFlow] = useState(false)
+  const [startingRemoveItemId, setStartingRemoveItemId] = useState<string | null>(null)
+  const [isApplyingRemoveFlow, setIsApplyingRemoveFlow] = useState(false)
+  const [isCancellingTask, setIsCancellingTask] = useState(false)
+  const [rescheduleOptions, setRescheduleOptions] = useState<ScheduleRescheduleOption[]>([])
+  const [selectedRescheduleOption, setSelectedRescheduleOption] = useState<string | null>(null)
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null)
   const [lastReplan, setLastReplan] = useState<ReplanScheduleResult | null>(null)
@@ -173,22 +194,129 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
     }
   }
 
-  const handleDelete = async (scheduleItemId: string) => {
-    if (isRemovingItem) return
+  const closeRescheduleModal = (force = false) => {
+    if ((isApplyingRemoveFlow || isCancellingTask) && !force) return
+    setActiveRemoveFlow(null)
+    setRescheduleOptions([])
+    setSelectedRescheduleOption(null)
+    setRescheduleError(null)
+  }
 
-    setIsRemovingItem(true)
+  const handleStartRemoveFlow = async (item: ScheduleItem) => {
+    if (isCompletingItems || isStartingRemoveFlow || isApplyingRemoveFlow || isCancellingTask) return
+
+    setIsStartingRemoveFlow(true)
+    setStartingRemoveItemId(item.scheduleItemId)
+    setActiveRemoveFlow(null)
+    setRescheduleOptions([])
+    setSelectedRescheduleOption(null)
+    setRescheduleError(null)
     setErrorMessage(null)
     setNoticeMessage(null)
 
     try {
-      await deleteScheduleItem(scheduleItemId)
+      const result: RemoveFlowStartResult = await startRemoveFlow(item.scheduleItemId)
       await loadSchedule()
-      setNoticeMessage('Schedule item removed and plan refreshed.')
+
+      setActiveRemoveFlow({
+        originalItem: item,
+        sourcePatientTaskId: result.sourcePatientTaskId,
+        workingScheduleItemId: result.workingScheduleItemId,
+      })
+      setRescheduleOptions(result.options)
+      setSelectedRescheduleOption(result.options[0]?.scheduledFor ?? null)
+      if (result.warnings.length > 0) {
+        setRescheduleError(result.warnings.join(' '))
+      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete schedule item.'
+      const message = error instanceof Error ? error.message : 'Failed to start remove flow.'
       setErrorMessage(message)
     } finally {
-      setIsRemovingItem(false)
+      setStartingRemoveItemId(null)
+      setIsStartingRemoveFlow(false)
+    }
+  }
+
+  const handleConfirmReschedule = async () => {
+    if (!activeRemoveFlow || !selectedRescheduleOption || isCompletingItems || isApplyingRemoveFlow || isCancellingTask) {
+      return
+    }
+
+    setIsApplyingRemoveFlow(true)
+    setErrorMessage(null)
+    setNoticeMessage(null)
+    setRescheduleError(null)
+
+    try {
+      const result = await applyRemoveFlow(activeRemoveFlow.workingScheduleItemId, selectedRescheduleOption)
+      await loadSchedule()
+      closeRescheduleModal(true)
+      setNoticeMessage(result.notice)
+    } catch (error) {
+      if (error instanceof ScheduleRescheduleConflictError) {
+        const warningMessage = error.warnings.length > 0 ? ` ${error.warnings.join(' ')}` : ''
+        setRescheduleError(`${error.message}${warningMessage}`)
+        setRescheduleOptions(error.options)
+        setSelectedRescheduleOption(error.options[0]?.scheduledFor ?? null)
+        return
+      }
+      const message = error instanceof Error ? error.message : 'Failed to reschedule item.'
+      setRescheduleError(message)
+    } finally {
+      setIsApplyingRemoveFlow(false)
+    }
+  }
+
+  const handleCancelTask = async () => {
+    if (!activeRemoveFlow || isCompletingItems || isApplyingRemoveFlow || isCancellingTask) return
+
+    setIsCancellingTask(true)
+    setErrorMessage(null)
+    setNoticeMessage(null)
+    setRescheduleError(null)
+
+    try {
+      const result = await cancelTaskFromRemoveFlow(activeRemoveFlow.workingScheduleItemId)
+      await loadSchedule()
+      closeRescheduleModal(true)
+      setNoticeMessage(result.notice)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to cancel task.'
+      setRescheduleError(message)
+    } finally {
+      setIsCancellingTask(false)
+    }
+  }
+
+  const handleCompleteItems = async (scheduleItemIds: string[]) => {
+    if (isCompletingItems || isStartingRemoveFlow || isApplyingRemoveFlow || isCancellingTask) return
+
+    const uniqueIds = Array.from(new Set(scheduleItemIds))
+    if (uniqueIds.length === 0) return
+
+    setIsCompletingItems(true)
+    setCompletingItemIds(new Set(uniqueIds))
+    setErrorMessage(null)
+    setNoticeMessage(null)
+
+    try {
+      const result = await completeScheduleItems(uniqueIds)
+      await loadSchedule()
+
+      if (result.skippedIds.length > 0) {
+        setNoticeMessage(
+          `Completed ${result.completedIds.length} task${result.completedIds.length === 1 ? '' : 's'}, ` +
+            `skipped ${result.skippedIds.length}.`,
+        )
+      } else {
+        setNoticeMessage(`Completed ${result.completedIds.length} task${result.completedIds.length === 1 ? '' : 's'}.`)
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to complete schedule items.'
+      setErrorMessage(message)
+    } finally {
+      setCompletingItemIds(new Set())
+      setIsCompletingItems(false)
     }
   }
 
@@ -336,7 +464,6 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
             taskColumns.map((task) => (
               <div key={task.id} className="task-cell">
                 <strong>{task.name}</strong>
-                <span>Task definition</span>
               </div>
             ))
           ) : (
@@ -374,9 +501,13 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
                 slot={slot}
                 taskColumns={taskColumns}
                 groupedItems={groupedItems}
-                onDelete={handleDelete}
+                onStartRemoveFlow={handleStartRemoveFlow}
+                onCompleteItems={handleCompleteItems}
                 showDayLabel={filterMode === 'patient'}
-                isRemovingItem={isRemovingItem}
+                isRescheduleBusy={isStartingRemoveFlow || isApplyingRemoveFlow || isCancellingTask}
+                isCompletingItems={isCompletingItems}
+                completingItemIds={completingItemIds}
+                startingRemoveItemId={startingRemoveItemId}
               />
             ))
           ) : (
@@ -389,10 +520,99 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
           )}
         </div>
       </div>
+      {activeRemoveFlow ? (
+        <>
+          <button
+            type="button"
+            className="schedule-reschedule__overlay"
+            aria-label="Close reschedule dialog"
+            onClick={() => closeRescheduleModal()}
+          />
+          <section className="schedule-reschedule" role="dialog" aria-modal="true" aria-label="Reschedule task">
+            <header className="schedule-reschedule__header">
+              <h2>Reschedule or cancel task</h2>
+              <button
+                type="button"
+                className="schedule-reschedule__close"
+                onClick={() => closeRescheduleModal()}
+                disabled={isApplyingRemoveFlow || isCancellingTask}
+              >
+                <span aria-hidden>×</span>
+              </button>
+            </header>
+            <p className="schedule-reschedule__hint">
+              Task temporarily rescheduled after replan. Choose final slot or cancel task for{' '}
+              {activeRemoveFlow.originalItem.taskName} · {activeRemoveFlow.originalItem.patientName}.
+            </p>
+            {rescheduleError ? <p className="schedule-reschedule__error">{rescheduleError}</p> : null}
+            {rescheduleOptions.length > 0 ? (
+              <fieldset className="schedule-reschedule__options" disabled={isApplyingRemoveFlow || isCancellingTask}>
+                {rescheduleOptions.map((option) => (
+                  <label key={option.scheduledFor} className="schedule-reschedule__option">
+                    <input
+                      type="radio"
+                      name="reschedule-option"
+                      checked={selectedRescheduleOption === option.scheduledFor}
+                      onChange={() => setSelectedRescheduleOption(option.scheduledFor)}
+                    />
+                    <span>
+                      {formatScheduleDay(option.day)} · {formatHour(option.hour)}
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+            ) : (
+              <p className="schedule-reschedule__state">No available consecutive slots found.</p>
+            )}
+            <footer className="schedule-reschedule__actions">
+              <button
+                type="button"
+                className="card-btn"
+                onClick={() => closeRescheduleModal()}
+                disabled={isApplyingRemoveFlow || isCancellingTask}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="card-btn card-btn--danger"
+                onClick={handleCancelTask}
+                disabled={isApplyingRemoveFlow || isCancellingTask}
+              >
+                {isCancellingTask ? 'Cancelling...' : 'Cancel task'}
+              </button>
+              <button
+                type="button"
+                className="card-btn card-btn--primary"
+                onClick={handleConfirmReschedule}
+                disabled={isApplyingRemoveFlow || isCancellingTask || !selectedRescheduleOption}
+              >
+                {isApplyingRemoveFlow ? 'Rescheduling...' : 'Reschedule'}
+              </button>
+            </footer>
+          </section>
+        </>
+      ) : null}
       <LoadingOverlay
-        open={isRemovingItem}
-        message="Reorganizing tasks and refreshing schedule..."
-        ariaLabel="Reorganizing schedule"
+        open={isCompletingItems || isStartingRemoveFlow || isApplyingRemoveFlow || isCancellingTask}
+        message={
+          isCompletingItems
+            ? 'Completing tasks and refreshing schedule...'
+            : isStartingRemoveFlow
+              ? 'Replanning task and preparing consecutive slots...'
+              : isCancellingTask
+                ? 'Cancelling task and refreshing schedule...'
+                : 'Applying selected schedule slot...'
+        }
+        ariaLabel={
+          isCompletingItems
+            ? 'Completing schedule items'
+            : isStartingRemoveFlow
+              ? 'Preparing remove flow'
+              : isCancellingTask
+                ? 'Cancelling task'
+                : 'Applying remove flow slot'
+        }
       />
     </section>
   )
@@ -431,30 +651,59 @@ function Row({
   slot,
   taskColumns,
   groupedItems,
-  onDelete,
+  onStartRemoveFlow,
+  onCompleteItems,
   showDayLabel,
-  isRemovingItem,
+  isRescheduleBusy,
+  isCompletingItems,
+  completingItemIds,
+  startingRemoveItemId,
 }: {
   slot: string
   taskColumns: ScheduleTaskDefinition[]
   groupedItems: Map<string, ScheduleItem[]>
-  onDelete: (scheduleItemId: string) => void
+  onStartRemoveFlow: (item: ScheduleItem) => void
+  onCompleteItems: (scheduleItemIds: string[]) => void
   showDayLabel: boolean
-  isRemovingItem: boolean
+  isRescheduleBusy: boolean
+  isCompletingItems: boolean
+  completingItemIds: Set<string>
+  startingRemoveItemId: string | null
 }) {
   const slotHour = Number(slot.slice(0, 2))
+  const rowPendingItemIds = taskColumns
+    .flatMap((task) => groupedItems.get(buildCellKey(slotHour, task.name)) ?? [])
+    .filter((item) => item.status === 'pending')
+    .map((item) => item.scheduleItemId)
 
   return (
     <>
-      <div className="time-cell">{slot}</div>
+      <div className="time-cell time-cell--with-actions">
+        <span>{slot}</span>
+        <button
+          type="button"
+          className="time-cell__complete-all"
+          disabled={rowPendingItemIds.length === 0 || isRescheduleBusy || isCompletingItems}
+          onClick={() => onCompleteItems(rowPendingItemIds)}
+        >
+          Mark all as completed
+        </button>
+      </div>
       {taskColumns.map((task) => {
         const itemsForCell = groupedItems.get(buildCellKey(slotHour, task.name)) ?? []
+        const isCellCompleted = itemsForCell.length > 0 && itemsForCell.every((item) => item.status === 'completed')
 
         return (
-          <div key={`${slot}-${task.id}`} className={`slot-cell ${itemsForCell.length > 0 ? 'slot-cell--filled' : ''}`}>
+          <div
+            key={`${slot}-${task.id}`}
+            className={`slot-cell ${itemsForCell.length > 0 ? 'slot-cell--filled' : ''} ${isCellCompleted ? 'slot-cell--completed' : ''}`}
+          >
             {itemsForCell.length > 0 ? (
               <div className="schedule-card-stack">
                 {itemsForCell.map((item) => {
+                  const isCompleted = item.status === 'completed'
+                  const isCompletingThisCard = completingItemIds.has(item.scheduleItemId)
+                  const isStartingThisCard = startingRemoveItemId === item.scheduleItemId
                   const patientTone = patientToneFor(item.patientName)
                   const cardStyle = {
                     '--patient-accent': patientTone.accent,
@@ -463,7 +712,11 @@ function Row({
                   } as CSSProperties
 
                   return (
-                    <article key={item.scheduleItemId} className="schedule-card" style={cardStyle}>
+                    <article
+                      key={item.scheduleItemId}
+                      className={`schedule-card ${isCompleted ? 'schedule-card--completed' : ''}`}
+                      style={cardStyle}
+                    >
                       <strong>{item.patientName}</strong>
                       <span className="schedule-card__meta">Priority {item.priorityScore.toFixed(1)}</span>
                       <span className="schedule-card__meta">Original {formatHour(item.hour)}</span>
@@ -471,13 +724,24 @@ function Row({
                       <p>{item.reason}</p>
                       <button
                         type="button"
-                        className="schedule-card__remove"
-                        disabled={isRemovingItem}
-                        onClick={() => onDelete(item.scheduleItemId)}
-                        aria-label={`Remove ${item.taskName} for ${item.patientName}`}
+                        className="schedule-card__complete"
+                        disabled={isCompleted || isRescheduleBusy || isCompletingItems}
+                        onClick={() => onCompleteItems([item.scheduleItemId])}
+                        aria-label={`Mark ${item.taskName} for ${item.patientName} as completed`}
                       >
-                        Remove
+                        {isCompletingThisCard ? 'Completing...' : 'Completed'}
                       </button>
+                      {!isCompleted ? (
+                        <button
+                          type="button"
+                          className="schedule-card__remove"
+                          disabled={isRescheduleBusy || isCompletingItems || isStartingThisCard}
+                          onClick={() => onStartRemoveFlow(item)}
+                          aria-label={`Reschedule ${item.taskName} for ${item.patientName}`}
+                        >
+                          {isStartingThisCard ? 'Replanning...' : 'Remove'}
+                        </button>
+                      ) : null}
                     </article>
                   )
                 })}

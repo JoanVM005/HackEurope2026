@@ -14,7 +14,7 @@ interface PatientDetailsPopupProps {
   patient: PatientCardData | null
   taskDefinitions: TaskDefinitionData[]
   onSaved: (warningMessage?: string) => Promise<void> | void
-  onDelete: (patientExternalId: string) => Promise<void> | void
+  onDelete: (patientExternalId: number) => Promise<void> | void
   onClose: () => void
 }
 
@@ -23,6 +23,19 @@ type TaskSnapshotStatus = TaskStatus | 'unassigned'
 interface TaskSnapshot {
   status: TaskSnapshotStatus
   patientTaskId: string | null
+}
+
+function toTaskStatusLabel(status: TaskSnapshotStatus): string {
+  switch (status) {
+    case 'pending':
+      return 'pending'
+    case 'done':
+      return 'completed'
+    case 'cancelled':
+      return ''
+    default:
+      return ''
+  }
 }
 
 export function PatientDetailsPopup({
@@ -314,8 +327,10 @@ function PatientDetailsPopupContent({
         <fieldset className="patient-popup__tasks">
           <legend>Assigned tasks</legend>
           {taskDefinitions.map((taskDefinition) => {
-            const snapshot = taskSnapshot[taskDefinition.id]
+            const snapshot = taskSnapshot[taskDefinition.id] ?? { status: 'unassigned', patientTaskId: null }
             const isDone = snapshot?.status === 'done'
+            const statusLabel = toTaskStatusLabel(snapshot.status)
+            const statusTone = snapshot.status === 'done' ? 'completed' : snapshot.status
 
             return (
               <label key={taskDefinition.id} className={`patient-popup__task ${isDone ? 'patient-popup__task--done' : ''}`}>
@@ -325,7 +340,10 @@ function PatientDetailsPopupContent({
                   disabled={isDone || isLoadingTasks || isSaving}
                   onChange={() => toggleTask(taskDefinition.id)}
                 />
-                <span>{taskDefinition.name}</span>
+                <span className="patient-popup__task-name">{taskDefinition.name}</span>
+                {statusLabel ? (
+                  <span className={`patient-popup__task-status patient-popup__task-status--${statusTone}`}>{statusLabel}</span>
+                ) : null}
               </label>
             )
           })}

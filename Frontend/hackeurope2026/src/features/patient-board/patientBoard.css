@@ -381,11 +381,49 @@
   grid-column: span 2;
 }
 
-.patient-popup__task {
+.patient-popup__tasks .patient-popup__task {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 0.45rem;
+  row-gap: 0.35rem;
   border: 1px solid color-mix(in srgb, var(--silver) 78%, var(--primary) 22%);
   border-radius: 10px;
   background: var(--white);
   padding: 0.5rem 0.6rem;
+}
+
+.patient-popup__task-name {
+  font-weight: 700;
+}
+
+.patient-popup__task-status {
+  grid-column: 2;
+  justify-self: flex-start;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: lowercase;
+}
+
+.patient-popup__task-status--pending {
+  border: 1px solid #c7d8ef;
+  background: #eef4ff;
+  color: #2e5f9a;
+}
+
+.patient-popup__task-status--completed {
+  border: 1px solid #9fd7b0;
+  background: #e9f9ee;
+  color: #1f6f3b;
+}
+
+.patient-popup__task-status--cancelled {
+  border: 1px solid #efc9a4;
+  background: #fff4e8;
+  color: #9b4f16;
 }
 
 .patient-popup__task--done {

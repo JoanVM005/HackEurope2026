@@ -214,6 +214,7 @@ Most errors use FastAPI default:
 
 ### `PATCH /patient-tasks/{patient_task_id}`
 - Description: Update patient task status and/or due date. Triggers automatic schedule replan.
+- Business rule: once a task is `done`, it cannot be reverted to `pending` or `cancelled`.
 - Path params:
   - `patient_task_id` (UUID)
 - Request body (at least one field):
@@ -234,12 +235,14 @@ Most errors use FastAPI default:
   "items": [
     {
       "schedule_item_id": "uuid",
+      "source_patient_task_id": "uuid",
       "task_name": "Blood test",
       "patient_name": "Elena Ruiz",
       "day": "2026-02-21",
       "hour": 9,
       "priority_score": 41.5,
-      "reason": "Time-sensitive lab order"
+      "reason": "Time-sensitive lab order",
+      "status": "pending"
     }
   ],
   "applied_preferences": {
@@ -267,6 +270,174 @@ Most errors use FastAPI default:
 - Request body: none.
 - Response `200`: `SchedulePlanResponse`.
 - Errors: `502`.
+
+### `POST /schedule/complete`
+- Description: Complete one or more schedule items in bulk. Linked `patient_tasks` are moved to terminal status `done`. Triggers automatic replan once after bulk update.
+- Request body:
+```json
+{
+  "schedule_item_ids": ["uuid", "uuid"]
+}
+```
+- Response `200`:
+```json
+{
+  "completed_ids": ["uuid"],
+  "skipped_ids": ["uuid"],
+  "warnings": [
+    "Schedule item 'uuid' has no source patient task and cannot be completed."
+  ]
+}
+```
+- Errors: `400`, `404`, `502`.
+
+### `POST /schedule/{schedule_item_id}/remove-flow/start`
+- Description: Start assisted remove flow for a pending task.
+1. Delete current schedule slot without cancelling source task.
+2. Run global replan.
+3. Find the new working slot of the same source task.
+4. Return 3 consecutive free slots (hourly) from first valid block.
+- Path params:
+  - `schedule_item_id` (UUID)
+- Request body: none.
+- Response `200`:
+```json
+{
+  "original_schedule_item_id": "uuid",
+  "working_schedule_item_id": "uuid",
+  "source_patient_task_id": "uuid",
+  "options": [
+    { "scheduled_for": "2026-02-22T11:00:00+00:00", "day": "2026-02-22", "hour": 11 },
+    { "scheduled_for": "2026-02-22T12:00:00+00:00", "day": "2026-02-22", "hour": 12 },
+    { "scheduled_for": "2026-02-22T13:00:00+00:00", "day": "2026-02-22", "hour": 13 }
+  ],
+  "warnings": []
+}
+```
+- Response `409`:
+```json
+{
+  "detail": {
+    "message": "No block of 3 consecutive free slots is currently available.",
+    "options": [],
+    "warnings": ["No block of 3 consecutive free slots was found within the lookahead window."]
+  }
+}
+```
+- Errors: `400`, `404`, `409`, `502`.
+
+### `POST /schedule/{working_schedule_item_id}/remove-flow/apply`
+- Description: Apply selected slot for an active remove flow.
+- Path params:
+  - `working_schedule_item_id` (UUID)
+- Request body:
+```json
+{
+  "scheduled_for": "2026-02-22T11:00:00Z"
+}
+```
+- Response `200`:
+```json
+{
+  "schedule_item_id": "uuid",
+  "scheduled_for": "2026-02-22T11:00:00+00:00",
+  "notice": "Task rescheduled successfully."
+}
+```
+- Response `409`:
+```json
+{
+  "detail": {
+    "message": "Selected slot is no longer available.",
+    "options": [
+      { "scheduled_for": "2026-02-22T12:00:00+00:00", "day": "2026-02-22", "hour": 12 },
+      { "scheduled_for": "2026-02-22T13:00:00+00:00", "day": "2026-02-22", "hour": 13 },
+      { "scheduled_for": "2026-02-22T14:00:00+00:00", "day": "2026-02-22", "hour": 14 }
+    ],
+    "warnings": []
+  }
+}
+```
+- Errors: `400`, `404`, `409`, `502`.
+
+### `POST /schedule/{working_schedule_item_id}/remove-flow/cancel-task`
+- Description: Cancel the linked pending `patient_task` and remove working slot.
+- Path params:
+  - `working_schedule_item_id` (UUID)
+- Request body: none.
+- Response `200`:
+```json
+{
+  "schedule_item_id": "uuid",
+  "source_patient_task_id": "uuid",
+  "notice": "Task cancelled successfully."
+}
+```
+- Errors: `400`, `404`, `502`.
+
+### Legacy reschedule endpoints
+- `GET /schedule/{schedule_item_id}/reschedule-options`
+- `POST /schedule/{schedule_item_id}/reschedule`
+- Status: kept for backward compatibility; new UI flow uses `remove-flow/*`.
+
+### `GET /schedule/{schedule_item_id}/reschedule-options`
+- Description: Return next available schedule slots for re-assigning a pending schedule item.
+- Path params:
+  - `schedule_item_id` (UUID)
+- Response `200`:
+```json
+{
+  "schedule_item_id": "uuid",
+  "options": [
+    {
+      "scheduled_for": "2026-02-22T11:00:00+00:00",
+      "day": "2026-02-22",
+      "hour": 11
+    }
+  ],
+  "warnings": []
+}
+```
+- Errors: `400`, `404`, `502`.
+
+### `POST /schedule/{schedule_item_id}/reschedule`
+- Description: Reschedule a pending task to a selected slot. Flow:
+1. Delete current slot without cancelling source task.
+2. Replan globally.
+3. Move the same task to the requested slot if still free.
+- Path params:
+  - `schedule_item_id` (UUID)
+- Request body:
+```json
+{
+  "scheduled_for": "2026-02-22T11:00:00Z"
+}
+```
+- Response `200`:
+```json
+{
+  "schedule_item_id": "uuid",
+  "scheduled_for": "2026-02-22T11:00:00+00:00",
+  "notice": "Task rescheduled successfully."
+}
+```
+- Response `409` (selected slot became occupied):
+```json
+{
+  "detail": {
+    "message": "Selected slot is no longer available.",
+    "options": [
+      {
+        "scheduled_for": "2026-02-22T12:00:00+00:00",
+        "day": "2026-02-22",
+        "hour": 12
+      }
+    ],
+    "warnings": []
+  }
+}
+```
+- Errors: `400`, `404`, `409`, `502`.
 
 ## Preferences
 
@@ -327,7 +498,7 @@ Most errors use FastAPI default:
 ### `DELETE /schedule/{schedule_item_id}`
 - Description:
 1. Fetch schedule item.
-2. Cancel source `patient_task` (if linked).
+2. Cancel source `patient_task` only when the schedule item is still `pending`.
 3. Delete schedule item.
 4. Trigger automatic replan.
 - Path params:
