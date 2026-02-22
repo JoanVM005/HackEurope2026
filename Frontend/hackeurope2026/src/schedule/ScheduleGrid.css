@@ -109,7 +109,7 @@
   gap: 0.65rem;
 }
 
-.clinician-count {
+.task-count {
   padding: 0.45rem 0.85rem;
   border-radius: 999px;
   background: #ffffff;
@@ -226,7 +226,7 @@
   min-height: 64px;
 }
 
-.clinician-cell {
+.task-cell {
   position: sticky;
   top: 0;
   z-index: 3;
@@ -239,17 +239,17 @@
   border-right: 1px solid var(--line);
 }
 
-.clinician-cell strong {
+.task-cell strong {
   font-size: 0.95rem;
   color: var(--ink);
 }
 
-.clinician-cell span {
+.task-cell span {
   font-size: 0.8rem;
   color: var(--muted);
 }
 
-.clinician-cell--empty {
+.task-cell--empty {
   min-height: 64px;
 }
 
@@ -287,6 +287,12 @@
   color: var(--ink);
   text-align: left;
   padding: 0.35rem;
+}
+
+.schedule-card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .schedule-card {
@@ -342,6 +348,11 @@
 
 .schedule-card__remove:hover {
   background: color-mix(in srgb, var(--patient-surface) 75%, #ffffff 25%);
+}
+
+.schedule-card__remove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .schedule-state {

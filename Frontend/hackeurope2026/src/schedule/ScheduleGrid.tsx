@@ -1,28 +1,29 @@
 import './ScheduleGrid.css'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import LoadingOverlay from '../components/loading-overlay/LoadingOverlay'
 import { getDoctorId } from '../lib/apiClient'
-import { DEFAULT_CLINICIANS } from '../types/clinician'
-import type { Clinician } from '../types/clinician'
 import {
   deleteScheduleItem,
-  listSchedule,
   listScheduleByDay,
   listScheduleByPatient,
+  listTaskDefinitions,
   replanSchedule,
   type ReplanScheduleResult,
   type ScheduleItem,
+  type ScheduleTaskDefinition,
 } from './scheduleApi'
 
 type ScheduleGridProps = {
-  clinicians?: Clinician[]
   onConfigurePatients?: () => void
 }
 
-const STEP_MINUTES = 30
+type FilterMode = 'day' | 'patient'
+
+const STEP_MINUTES = 60
 const MIN_TIME = 0
-const MAX_START_TIME = 23 * 60
-const MAX_END_TIME = 23 * 60 + 30
+const MAX_START_TIME = 22 * 60
+const MAX_END_TIME = 23 * 60
 
 function sortPlanItems(items: ScheduleItem[]): ScheduleItem[] {
   return [...items].sort((a, b) => {
@@ -33,103 +34,114 @@ function sortPlanItems(items: ScheduleItem[]): ScheduleItem[] {
   })
 }
 
-export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatients }: ScheduleGridProps) {
-  const activeClinicians = clinicians.length > 0 ? clinicians : DEFAULT_CLINICIANS
+function buildCellKey(hour: number, taskName: string): string {
+  return `${hour}|${normalizeTaskKey(taskName)}`
+}
+
+export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
-  const [filterMode, setFilterMode] = useState<'all' | 'day' | 'patient'>('all')
+  const [filterMode, setFilterMode] = useState<FilterMode>('day')
   const [dayFilter, setDayFilter] = useState(() => new Date().toISOString().slice(0, 10))
   const [patientFilter, setPatientFilter] = useState('')
   const [items, setItems] = useState<ScheduleItem[]>([])
+  const [taskDefinitions, setTaskDefinitions] = useState<ScheduleTaskDefinition[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingTasks, setIsLoadingTasks] = useState(true)
   const [isReplanning, setIsReplanning] = useState(false)
+  const [isRemovingItem, setIsRemovingItem] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null)
   const [lastReplan, setLastReplan] = useState<ReplanScheduleResult | null>(null)
 
   const timeSlots = useMemo(() => createTimeSlots(startTime, endTime), [startTime, endTime])
-  const columnWidthRem = 10
+  const slotHours = useMemo(() => {
+    const hours = new Set<number>()
+    for (const slot of timeSlots) {
+      hours.add(Number(slot.slice(0, 2)))
+    }
+    return hours
+  }, [timeSlots])
+
+  const taskColumns = useMemo(
+    () => [...taskDefinitions].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
+    [taskDefinitions],
+  )
+
+  const columnWidthRem = 12
   const timeColumnWidthRem = 8.5
-  const clinicianCount = Math.max(activeClinicians.length, 1)
-  const minGridWidthRem = timeColumnWidthRem + clinicianCount * columnWidthRem
+  const taskColumnCount = Math.max(taskColumns.length, 1)
+  const minGridWidthRem = timeColumnWidthRem + taskColumnCount * columnWidthRem
 
   const previewItems = useMemo(() => {
     if (!lastReplan) return []
     return sortPlanItems(lastReplan.items).slice(0, 8)
   }, [lastReplan])
 
-  const { slotAssignments, overflowCount } = useMemo(() => {
-    const assignments = new Map<string, ScheduleItem[]>()
-    const slotPatients = new Map<string, Set<string>>()
-    const sorted = [...items].sort((a, b) => a.hour - b.hour || b.priorityScore - a.priorityScore)
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, ScheduleItem[]>()
 
-    for (const slot of timeSlots) {
-      assignments.set(slot, [])
-      slotPatients.set(slot, new Set())
-    }
-
-    if (timeSlots.length === 0 || clinicianCount <= 0) {
-      return {
-        slotAssignments: assignments,
-        overflowCount: sorted.length,
+    for (const item of items) {
+      const key = buildCellKey(item.hour, item.taskName)
+      const current = groups.get(key)
+      if (current) {
+        current.push(item)
+      } else {
+        groups.set(key, [item])
       }
     }
 
-    const clinicStartMinutes = minutesFromTime(startTime)
-    let unableToPlace = 0
-
-    for (const item of sorted) {
-      const preferredMinutes = item.hour * 60
-      const preferredIndex = Math.min(
-        Math.max(Math.floor((preferredMinutes - clinicStartMinutes) / STEP_MINUTES), 0),
-        timeSlots.length - 1,
-      )
-
-      let placed = false
-      for (let offset = 0; offset < timeSlots.length; offset += 1) {
-        const slotIndex = (preferredIndex + offset) % timeSlots.length
-        const slot = timeSlots[slotIndex]
-        const slotItems = assignments.get(slot)
-        const slotPatientKeys = slotPatients.get(slot)
-        const patientKey = normalizePatientKey(item.patientName)
-
-        if (!slotItems || !slotPatientKeys) continue
-        if (slotItems.length >= clinicianCount) continue
-        if (slotPatientKeys.has(patientKey)) continue
-
-        slotItems.push(item)
-        slotPatientKeys.add(patientKey)
-        placed = true
-        break
-      }
-
-      if (!placed) unableToPlace += 1
+    for (const bucket of groups.values()) {
+      bucket.sort((a, b) => {
+        const byDay = a.day.localeCompare(b.day)
+        if (byDay !== 0) return byDay
+        if (a.priorityScore !== b.priorityScore) return b.priorityScore - a.priorityScore
+        return a.patientName.localeCompare(b.patientName, undefined, { sensitivity: 'base' })
+      })
     }
 
-    return {
-      slotAssignments: assignments,
-      overflowCount: unableToPlace,
+    return groups
+  }, [items])
+
+  const hiddenByHoursCount = useMemo(
+    () => items.reduce((count, item) => (slotHours.has(item.hour) ? count : count + 1), 0),
+    [items, slotHours],
+  )
+
+  const loadTaskColumns = useCallback(async () => {
+    setIsLoadingTasks(true)
+    try {
+      const definitions = await listTaskDefinitions()
+      setTaskDefinitions(definitions)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load task definitions.'
+      setErrorMessage(message)
+      setTaskDefinitions([])
+    } finally {
+      setIsLoadingTasks(false)
     }
-  }, [clinicianCount, items, startTime, timeSlots])
+  }, [])
 
   const loadSchedule = useCallback(async () => {
     setIsLoading(true)
     setErrorMessage(null)
+
     try {
       const scheduleItems =
-        filterMode === 'day'
-          ? await listScheduleByDay(dayFilter)
-          : filterMode === 'patient'
-            ? await listScheduleByPatient(patientFilter.trim())
-            : await listSchedule()
+        filterMode === 'day' ? await listScheduleByDay(dayFilter) : await listScheduleByPatient(patientFilter.trim())
       setItems(scheduleItems)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load schedule.'
       setErrorMessage(message)
+      setItems([])
     } finally {
       setIsLoading(false)
     }
   }, [dayFilter, filterMode, patientFilter])
+
+  useEffect(() => {
+    void loadTaskColumns()
+  }, [loadTaskColumns])
 
   useEffect(() => {
     if (filterMode === 'patient' && !patientFilter.trim()) {
@@ -150,9 +162,9 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
 
     try {
       const result = await replanSchedule()
-      setItems(result.items)
       setLastReplan(result)
       setNoticeMessage('Schedule replanned successfully.')
+      await loadSchedule()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to run planner.'
       setErrorMessage(message)
@@ -162,6 +174,9 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
   }
 
   const handleDelete = async (scheduleItemId: string) => {
+    if (isRemovingItem) return
+
+    setIsRemovingItem(true)
     setErrorMessage(null)
     setNoticeMessage(null)
 
@@ -172,17 +187,19 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete schedule item.'
       setErrorMessage(message)
+    } finally {
+      setIsRemovingItem(false)
     }
   }
 
   return (
-    <section className="schedule" aria-label="Clinician timetable">
+    <section className="schedule" aria-label="Task timetable">
       <header className="schedule-header">
         <div>
           <h1>Today's Timetable</h1>
           <p>
-            Times on the left, clinicians across the top. Changing clinic hours automatically reflows appointments into
-            available slots.
+            Times are shown on the left and task definitions across the top. Scheduled items are grouped consistently by
+            hour and matching task column.
           </p>
           <div className="time-controls" aria-label="Clinic hours">
             <label className="time-control">
@@ -191,7 +208,7 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
                 type="time"
                 step={STEP_MINUTES * 60}
                 min="00:00"
-                max="23:00"
+                max="22:00"
                 value={startTime}
                 onChange={(event) => {
                   const newStart = clamp(minutesFromTime(event.target.value), MIN_TIME, MAX_START_TIME)
@@ -209,8 +226,8 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
               <input
                 type="time"
                 step={STEP_MINUTES * 60}
-                min="00:30"
-                max="23:30"
+                min="01:00"
+                max="23:00"
                 value={endTime}
                 onChange={(event) => {
                   const newEnd = clamp(minutesFromTime(event.target.value), STEP_MINUTES, MAX_END_TIME)
@@ -227,8 +244,7 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
           <div className="schedule-filters" aria-label="Schedule filters">
             <label className="schedule-filter">
               <span>View</span>
-              <select value={filterMode} onChange={(event) => setFilterMode(event.target.value as 'all' | 'day' | 'patient')}>
-                <option value="all">All</option>
+              <select value={filterMode} onChange={(event) => setFilterMode(event.target.value as FilterMode)}>
                 <option value="day">By day</option>
                 <option value="patient">By patient</option>
               </select>
@@ -254,14 +270,14 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
           </div>
           {errorMessage ? <p className="schedule-feedback schedule-feedback--error">{errorMessage}</p> : null}
           {noticeMessage ? <p className="schedule-feedback schedule-feedback--notice">{noticeMessage}</p> : null}
-          {overflowCount > 0 ? (
+          {hiddenByHoursCount > 0 ? (
             <p className="schedule-feedback schedule-feedback--warn">
-              {overflowCount} appointment{overflowCount > 1 ? 's' : ''} could not fit in the selected clinic hours.
+              {hiddenByHoursCount} appointment{hiddenByHoursCount > 1 ? 's are' : ' is'} outside the selected clinic hours.
             </p>
           ) : null}
         </div>
         <div className="schedule-actions">
-          <span className="clinician-count">{activeClinicians.length} clinicians</span>
+          <span className="task-count">{taskDefinitions.length} tasks</span>
           {onConfigurePatients ? (
             <button type="button" className="page-action-btn page-action-btn--secondary" onClick={onConfigurePatients}>
               Configure patients
@@ -310,29 +326,43 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
         <div
           className="schedule-grid"
           style={{
-            gridTemplateColumns: `${timeColumnWidthRem}rem repeat(${clinicianCount}, minmax(${columnWidthRem}rem, 1fr))`,
+            gridTemplateColumns: `${timeColumnWidthRem}rem repeat(${taskColumnCount}, minmax(${columnWidthRem}rem, 1fr))`,
             minWidth: `${minGridWidthRem}rem`,
           }}
         >
           <div className="corner-cell" />
-          {activeClinicians.length > 0 ? (
-            activeClinicians.map((clinician) => (
-              <div key={clinician.id} className="clinician-cell">
-                <strong>{clinician.name}</strong>
-                <span>{clinician.role}</span>
+          {taskColumns.length > 0 ? (
+            taskColumns.map((task) => (
+              <div key={task.id} className="task-cell">
+                <strong>{task.name}</strong>
+                <span>Task definition</span>
               </div>
             ))
           ) : (
-            <div className="clinician-cell clinician-cell--empty">
-              <strong>No clinicians</strong>
-              <span>Add at least one clinician to fill the timetable.</span>
+            <div className="task-cell task-cell--empty">
+              <strong>No tasks configured</strong>
+              <span>Create task definitions to build this table.</span>
             </div>
           )}
 
-          {isLoading ? (
+          {isLoadingTasks ? (
             <>
               <div className="time-cell">--:--</div>
-              <div className="slot-cell slot-cell--disabled schedule-state" style={{ gridColumn: `span ${clinicianCount}` }}>
+              <div className="slot-cell slot-cell--disabled schedule-state" style={{ gridColumn: `span ${taskColumnCount}` }}>
+                Loading tasks...
+              </div>
+            </>
+          ) : taskColumns.length === 0 ? (
+            <>
+              <div className="time-cell">--:--</div>
+              <div className="slot-cell slot-cell--disabled schedule-state" style={{ gridColumn: `span ${taskColumnCount}` }}>
+                No tasks configured yet.
+              </div>
+            </>
+          ) : isLoading ? (
+            <>
+              <div className="time-cell">--:--</div>
+              <div className="slot-cell slot-cell--disabled schedule-state" style={{ gridColumn: `span ${taskColumnCount}` }}>
                 Loading schedule...
               </div>
             </>
@@ -341,21 +371,28 @@ export function ScheduleGrid({ clinicians = DEFAULT_CLINICIANS, onConfigurePatie
               <Row
                 key={slot}
                 slot={slot}
-                clinicians={activeClinicians}
-                itemsForSlot={slotAssignments.get(slot) ?? []}
+                taskColumns={taskColumns}
+                groupedItems={groupedItems}
                 onDelete={handleDelete}
+                showDayLabel={filterMode === 'patient'}
+                isRemovingItem={isRemovingItem}
               />
             ))
           ) : (
             <>
               <div className="time-cell">--:--</div>
-              <div className="slot-cell slot-cell--disabled schedule-state" style={{ gridColumn: `span ${clinicianCount}` }}>
+              <div className="slot-cell slot-cell--disabled schedule-state" style={{ gridColumn: `span ${taskColumnCount}` }}>
                 No time slots in selected range.
               </div>
             </>
           )}
         </div>
       </div>
+      <LoadingOverlay
+        open={isRemovingItem}
+        message="Reorganizing tasks and refreshing schedule..."
+        ariaLabel="Reorganizing schedule"
+      />
     </section>
   )
 }
@@ -391,59 +428,65 @@ function clamp(value: number, min: number, max: number): number {
 
 function Row({
   slot,
-  clinicians,
-  itemsForSlot,
+  taskColumns,
+  groupedItems,
   onDelete,
+  showDayLabel,
+  isRemovingItem,
 }: {
   slot: string
-  clinicians: Clinician[]
-  itemsForSlot: ScheduleItem[]
+  taskColumns: ScheduleTaskDefinition[]
+  groupedItems: Map<string, ScheduleItem[]>
   onDelete: (scheduleItemId: string) => void
+  showDayLabel: boolean
+  isRemovingItem: boolean
 }) {
+  const slotHour = Number(slot.slice(0, 2))
+
   return (
     <>
       <div className="time-cell">{slot}</div>
-      {clinicians.length > 0 ? (
-        clinicians.map((clinician, index) => {
-          const item = itemsForSlot[index]
-          const patientTone = item ? patientToneFor(item.patientName) : null
-          const cardStyle = patientTone
-            ? ({
-                '--patient-accent': patientTone.accent,
-                '--patient-surface': patientTone.surface,
-                '--patient-border': patientTone.border,
-              } as CSSProperties)
-            : undefined
+      {taskColumns.map((task) => {
+        const itemsForCell = groupedItems.get(buildCellKey(slotHour, task.name)) ?? []
 
-          return (
-            <div key={`${slot}-${clinician.id}`} className={`slot-cell ${item ? 'slot-cell--filled' : ''}`}>
-              {item ? (
-                <article className="schedule-card" style={cardStyle}>
-                  <strong>{item.taskName}</strong>
-                  <span>{item.patientName}</span>
-                  <span className="schedule-card__meta">Priority {item.priorityScore.toFixed(1)}</span>
-                  <span className="schedule-card__meta">Original {formatHour(item.hour)}</span>
-                  <p>{item.reason}</p>
-                  <button
-                    type="button"
-                    className="schedule-card__remove"
-                    onClick={() => onDelete(item.scheduleItemId)}
-                    aria-label={`Remove ${item.taskName} for ${item.patientName}`}
-                  >
-                    Remove
-                  </button>
-                </article>
-              ) : (
-                <span>Open slot</span>
-              )}
-            </div>
-          )
-        })
-      ) : (
-        <button type="button" className="slot-cell slot-cell--disabled" disabled aria-label={`No clinician at ${slot}`}>
-          <span>Add clinician</span>
-        </button>
-      )}
+        return (
+          <div key={`${slot}-${task.id}`} className={`slot-cell ${itemsForCell.length > 0 ? 'slot-cell--filled' : ''}`}>
+            {itemsForCell.length > 0 ? (
+              <div className="schedule-card-stack">
+                {itemsForCell.map((item) => {
+                  const patientTone = patientToneFor(item.patientName)
+                  const cardStyle = {
+                    '--patient-accent': patientTone.accent,
+                    '--patient-surface': patientTone.surface,
+                    '--patient-border': patientTone.border,
+                  } as CSSProperties
+
+                  return (
+                    <article key={item.scheduleItemId} className="schedule-card" style={cardStyle}>
+                      <strong>{item.patientName}</strong>
+                      <span className="schedule-card__meta">Priority {item.priorityScore.toFixed(1)}</span>
+                      <span className="schedule-card__meta">Original {formatHour(item.hour)}</span>
+                      {showDayLabel ? <span className="schedule-card__meta">Day {formatScheduleDay(item.day)}</span> : null}
+                      <p>{item.reason}</p>
+                      <button
+                        type="button"
+                        className="schedule-card__remove"
+                        disabled={isRemovingItem}
+                        onClick={() => onDelete(item.scheduleItemId)}
+                        aria-label={`Remove ${item.taskName} for ${item.patientName}`}
+                      >
+                        Remove
+                      </button>
+                    </article>
+                  )
+                })}
+              </div>
+            ) : (
+              <span>Open slot</span>
+            )}
+          </div>
+        )
+      })}
     </>
   )
 }
@@ -452,8 +495,14 @@ function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, '0')}:00`
 }
 
-function normalizePatientKey(patientName: string): string {
-  return patientName.trim().toLowerCase()
+function formatScheduleDay(day: string): string {
+  const date = new Date(`${day}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return day
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date)
+}
+
+function normalizeTaskKey(taskName: string): string {
+  return taskName.trim().toLowerCase()
 }
 
 type PatientTone = {

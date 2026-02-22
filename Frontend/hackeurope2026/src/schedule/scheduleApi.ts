@@ -16,6 +16,13 @@ interface ScheduleItemDto {
   reason: string
 }
 
+interface TaskDefinitionDto {
+  id: string
+  name: string
+  created_at: string
+  updated_at: string
+}
+
 interface AppliedPreferencesSummaryDto {
   doctor_id: string
   source: 'mem0' | 'default'
@@ -36,6 +43,11 @@ export interface ScheduleItem {
   hour: number
   priorityScore: number
   reason: string
+}
+
+export interface ScheduleTaskDefinition {
+  id: string
+  name: string
 }
 
 export interface AppliedPreferencesSummary {
@@ -85,13 +97,15 @@ function mapAppliedPreferences(
   }
 }
 
-function mapPlan(response: SchedulePlanResponseDto): ScheduleItem[] {
-  return response.items.map(mapItem)
+function mapTaskDefinition(dto: TaskDefinitionDto): ScheduleTaskDefinition {
+  return {
+    id: dto.id,
+    name: dto.name,
+  }
 }
 
-export async function listSchedule(): Promise<ScheduleItem[]> {
-  const response = await apiRequest<SchedulePlanResponseDto>('/schedule')
-  return mapPlan(response)
+function mapPlan(response: SchedulePlanResponseDto): ScheduleItem[] {
+  return response.items.map(mapItem)
 }
 
 export async function replanSchedule(): Promise<ReplanScheduleResult> {
@@ -117,4 +131,9 @@ export async function deleteScheduleItem(scheduleItemId: string): Promise<void> 
   await apiRequest<void>(`/schedule/${encodeURIComponent(scheduleItemId)}`, {
     method: 'DELETE',
   })
+}
+
+export async function listTaskDefinitions(): Promise<ScheduleTaskDefinition[]> {
+  const response = await apiRequest<TaskDefinitionDto[]>('/task-definitions')
+  return response.map(mapTaskDefinition)
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PatientCard } from './PatientCard'
 import { PatientDetailsPopup } from './PatientDetailsPopup'
+import LoadingOverlay from '../../components/loading-overlay/LoadingOverlay'
 import {
   createPatient,
   createPatientTask,
@@ -350,31 +351,11 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
         onDelete={handleDeletePatient}
         onClose={() => setSelectedPatientId(null)}
       />
-      <PriorityReviewModal
-        open={reviewDraft !== null && reviewPreview !== null}
-        preview={reviewPreview}
-        finalPriority={reviewFinalPriority}
-        overrideReason={reviewOverrideReason}
-        errorMessage={reviewError}
-        onPriorityChange={setReviewFinalPriority}
-        onOverrideReasonChange={setReviewOverrideReason}
-        onCancel={() => {
-          setReviewDraft(null)
-          setReviewPreview(null)
-          setReviewError(null)
-        }}
-        onConfirm={() => void confirmCreatePatient()}
-        isSaving={isCreatingPatient}
+      <LoadingOverlay
+        open={isCreatingPatient}
+        message="Creating patient and syncing tasks..."
+        ariaLabel="Creating patient"
       />
-
-      {isCreatingPatient ? (
-        <div className="patient-board__loading-overlay" role="status" aria-live="polite">
-          <div className="patient-board__loading-modal">
-            <span className="patient-board__loading-spinner" aria-hidden />
-            <p>Creating patient and syncing tasks...</p>
-          </div>
-        </div>
-      ) : null}
     </main>
   )
 }
