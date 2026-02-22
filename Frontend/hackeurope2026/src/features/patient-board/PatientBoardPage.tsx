@@ -230,6 +230,12 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
     setErrorMessage(null)
   }
 
+  const handleCancelReview = () => {
+    setReviewDraft(null)
+    setReviewPreview(null)
+    setReviewError(null)
+  }
+
   return (
     <main className="patient-board">
       <header className="patient-board__hero">
@@ -350,6 +356,18 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
         onSaved={handleSavedFromPopup}
         onDelete={handleDeletePatient}
         onClose={() => setSelectedPatientId(null)}
+      />
+      <PriorityReviewModal
+        open={Boolean(reviewDraft && reviewPreview)}
+        preview={reviewPreview}
+        finalPriority={reviewFinalPriority}
+        overrideReason={reviewOverrideReason}
+        errorMessage={reviewError}
+        onPriorityChange={setReviewFinalPriority}
+        onOverrideReasonChange={setReviewOverrideReason}
+        onCancel={handleCancelReview}
+        onConfirm={confirmCreatePatient}
+        isSaving={isCreatingPatient}
       />
       <LoadingOverlay
         open={isCreatingPatient}
