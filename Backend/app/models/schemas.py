@@ -7,6 +7,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.models.preferences import AppliedPreferencesSummary
+
 
 class BaseSchema(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -166,6 +168,8 @@ class PlannedScheduleItem(BaseSchema):
 
 class SchedulePlanResponse(BaseSchema):
     items: list[PlannedScheduleItem]
+    applied_preferences: AppliedPreferencesSummary | None = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class HealthResponse(BaseSchema):

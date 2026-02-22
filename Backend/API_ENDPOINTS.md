@@ -207,13 +207,24 @@ Most errors use FastAPI default:
       "priority_score": 41.5,
       "reason": "Time-sensitive lab order"
     }
-  ]
+  ],
+  "applied_preferences": {
+    "doctor_id": "demo-doctor",
+    "source": "mem0",
+    "time_blocks_count": 1,
+    "overrides_applied_count": 2,
+    "scoring_weights": { "w_priority": 10, "w_wait": 0.05 },
+    "language": "es"
+  },
+  "warnings": []
 }
 ```
 
 ### `POST /schedule`
 - Description: Recompute and synchronize schedule from all pending patient tasks.
 - Request body: none.
+- Header:
+  - `X-Doctor-Id` (optional, fallback to `DEFAULT_DOCTOR_ID`)
 - Response `200`: `SchedulePlanResponse`.
 - Errors: `400`, `404`, `502`.
 
@@ -222,6 +233,46 @@ Most errors use FastAPI default:
 - Request body: none.
 - Response `200`: `SchedulePlanResponse`.
 - Errors: `502`.
+
+## Preferences
+
+### `GET /preferences`
+- Description: Get planner preferences for a doctor. Falls back to defaults if no Mem0 profile exists.
+- Header:
+  - `X-Doctor-Id` (optional, fallback to `DEFAULT_DOCTOR_ID`)
+- Response `200`:
+```json
+{
+  "doctor_id": "demo-doctor",
+  "source": "mem0",
+  "preferences": {
+    "time_blocks": [{ "start": "13:00", "end": "14:00" }],
+    "priority_overrides": [{ "match_type": "contains", "pattern": "K+", "priority": 5, "enabled": true }],
+    "scoring_weights": { "w_priority": 10, "w_wait": 0.05 },
+    "language": "es",
+    "explanations": { "include_reason": true, "include_formula": false }
+  },
+  "warnings": []
+}
+```
+
+### `POST /preferences`
+- Description: Upsert planner preferences for a doctor.
+- Behavior note: `priority_overrides` match against the **patient description** (not task name).
+- Header:
+  - `X-Doctor-Id` (optional, fallback to `DEFAULT_DOCTOR_ID`)
+- Request body (partial update supported):
+```json
+{
+  "time_blocks": [{ "start": "13:00", "end": "14:00" }],
+  "priority_overrides": [{ "match_type": "regex", "pattern": "\\bECG\\b", "priority": 4, "enabled": true }],
+  "scoring_weights": { "w_priority": 12, "w_wait": 0.04 },
+  "language": "es",
+  "explanations": { "include_reason": true, "include_formula": false }
+}
+```
+- Response `200`: same shape as `GET /preferences`.
+- Errors: `502` when Mem0 is unavailable or not configured.
 
 ### `GET /schedule/day/{day}`
 - Description: Return schedule for one day.

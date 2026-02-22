@@ -8,3 +8,4 @@ tenacity
 supabase==2.28.0
 python-multipart
 openai
+mem0ai

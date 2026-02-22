@@ -77,24 +77,6 @@
   background: #fbfdff;
 }
 
-.schedule-feedback {
-  margin: 0.5rem 0 0;
-  font-size: 0.86rem;
-  font-weight: 600;
-}
-
-.schedule-feedback--error {
-  color: #a31d1d;
-}
-
-.schedule-feedback--notice {
-  color: #1e5a9a;
-}
-
-.schedule-feedback--warn {
-  color: #8a5a00;
-}
-
 .time-control {
   display: flex;
   align-items: center;
@@ -148,13 +130,74 @@
   cursor: pointer;
 }
 
+.schedule-cta:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .schedule-cta:hover {
   background: var(--brand-blue-900);
 }
 
-.schedule-cta:disabled {
-  cursor: wait;
-  background: #7fa4d3;
+.schedule-feedback {
+  margin: 0.5rem 0 0;
+  border-radius: 10px;
+  padding: 0.6rem 0.72rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.schedule-feedback--error {
+  border: 1px solid color-mix(in srgb, var(--accent-orange) 56%, var(--silver) 44%);
+  background: color-mix(in srgb, var(--accent-orange) 14%, var(--white) 86%);
+  color: color-mix(in srgb, var(--accent-orange) 50%, var(--ink) 50%);
+}
+
+.schedule-feedback--notice {
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 50%, var(--silver) 50%);
+  background: color-mix(in srgb, var(--accent-cyan) 18%, var(--white) 82%);
+  color: var(--primary);
+}
+
+.schedule-feedback--warn {
+  border: 1px solid color-mix(in srgb, #c08a1d 55%, var(--silver) 45%);
+  background: color-mix(in srgb, #f0d7a7 40%, var(--white) 60%);
+  color: #7a4f00;
+}
+
+.schedule-summary {
+  margin: 0 0 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--silver) 72%, var(--primary) 28%);
+  border-radius: 14px;
+  padding: 0.75rem 0.8rem;
+  background: linear-gradient(
+    165deg,
+    var(--white) 0%,
+    color-mix(in srgb, var(--accent-blue) 8%, var(--white) 92%) 100%
+  );
+}
+
+.schedule-summary h2 {
+  margin: 0 0 0.4rem;
+  color: var(--primary);
+  font-size: 1.02rem;
+}
+
+.schedule-summary p {
+  margin: 0.2rem 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.schedule-summary__list {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  color: var(--ink);
+  font-size: 0.88rem;
+}
+
+.schedule-summary__list li + li {
+  margin-top: 0.2rem;
 }
 
 .schedule-grid-wrap {

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
 
     openai_model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")
+    mem0_api_key: str | None = Field(default=None, alias="MEM0_API_KEY")
+    mem0_project_id: str | None = Field(default=None, alias="MEM0_PROJECT_ID")
+    mem0_org_id: str | None = Field(default=None, alias="MEM0_ORG_ID")
+    default_doctor_id: str = Field(default="demo-doctor", alias="DEFAULT_DOCTOR_ID")
     env: str = Field(default="dev", alias="ENV")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 

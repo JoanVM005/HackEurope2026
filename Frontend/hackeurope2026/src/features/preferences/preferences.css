@@ -1,0 +1,188 @@
+.preferences-page {
+  min-height: 100vh;
+  width: 100%;
+  padding: clamp(1.2rem, 2vw, 2rem) clamp(1rem, 3vw, 2.2rem) 2rem;
+  background:
+    radial-gradient(circle at 90% 0%, color-mix(in srgb, var(--accent-cyan) 14%, transparent), transparent 40%),
+    radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--accent-pink) 8%, transparent), transparent 42%);
+}
+
+.preferences-page__header h1 {
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+}
+
+.preferences-page__header p {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+}
+
+.preferences-page__meta {
+  margin-top: 0.8rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.preferences-page__meta span {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--silver) 72%, var(--primary) 28%);
+  background: var(--white);
+  color: var(--primary);
+  padding: 0.3rem 0.72rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.preferences-page__feedback {
+  margin-top: 0.8rem;
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.preferences-page__feedback--error {
+  border: 1px solid color-mix(in srgb, var(--accent-orange) 56%, var(--silver) 44%);
+  background: color-mix(in srgb, var(--accent-orange) 14%, var(--white) 86%);
+}
+
+.preferences-page__feedback--notice {
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 50%, var(--silver) 50%);
+  background: color-mix(in srgb, var(--accent-cyan) 18%, var(--white) 82%);
+  color: var(--primary);
+}
+
+.preferences-page__feedback--warning {
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 35%, var(--silver) 65%);
+  background: color-mix(in srgb, var(--accent-blue) 10%, var(--white) 90%);
+  color: var(--ink);
+}
+
+.preferences-page__loading {
+  margin-top: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.preferences-card {
+  margin-top: 1rem;
+  border: 1px solid color-mix(in srgb, var(--silver) 72%, var(--primary) 28%);
+  border-radius: 14px;
+  padding: 0.9rem;
+  background: linear-gradient(
+    165deg,
+    var(--white) 0%,
+    color-mix(in srgb, var(--accent-blue) 8%, var(--white) 92%) 100%
+  );
+}
+
+.preferences-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.75rem;
+}
+
+.preferences-card h2 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.05rem;
+}
+
+.preferences-card__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.preferences-card__description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.preferences-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.preferences-row,
+.preferences-override-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.55rem;
+}
+
+.preferences-row input,
+.preferences-row select,
+.preferences-override-row input,
+.preferences-override-row select {
+  border: 1px solid color-mix(in srgb, var(--silver) 68%, var(--primary) 32%);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink);
+  padding: 0.45rem 0.62rem;
+  font: inherit;
+}
+
+.preferences-row label,
+.preferences-override-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.preferences-row label input[type='checkbox'],
+.preferences-override-row label input[type='checkbox'] {
+  accent-color: var(--accent-blue);
+}
+
+.preferences-card--compact .preferences-row {
+  margin-bottom: 0;
+}
+
+.preferences-page__footer {
+  margin-top: 1.1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.preferences-page .card-btn {
+  border: 1px solid color-mix(in srgb, var(--silver) 76%, var(--primary) 24%);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--white) 85%, var(--accent-cyan) 15%);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.52rem 0.68rem;
+  cursor: pointer;
+}
+
+.preferences-page .card-btn--danger {
+  color: color-mix(in srgb, var(--accent-orange) 46%, var(--ink) 54%);
+  background: color-mix(in srgb, var(--accent-orange) 16%, var(--white) 84%);
+  border-color: color-mix(in srgb, var(--accent-orange) 45%, var(--silver) 55%);
+}
+
+@media (max-width: 768px) {
+  .preferences-page {
+    padding: 0.8rem;
+  }
+
+  .preferences-card header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -20,6 +20,7 @@ from app.models.schemas import (
     TaskStatus,
 )
 from app.services.planner import PlannerService, PlannerValidationError
+from app.services.preferences_service import PreferencesService, get_preferences_service
 
 router = APIRouter(tags=["patient-tasks"])
 
@@ -27,8 +28,13 @@ router = APIRouter(tags=["patient-tasks"])
 def get_planner_service(
     repository: SupabaseRepository = Depends(get_repository),
     llm_client: OpenAIPlannerClient = Depends(get_openai_planner_client),
+    preferences_service: PreferencesService = Depends(get_preferences_service),
 ) -> PlannerService:
-    return PlannerService(repository=repository, llm_client=llm_client)
+    return PlannerService(
+        repository=repository,
+        llm_client=llm_client,
+        preferences_service=preferences_service,
+    )
 
 
 @router.post(

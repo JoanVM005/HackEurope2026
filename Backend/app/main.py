@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from app.config import configure_logging, get_settings
 from app.models.schemas import HealthResponse
 from app.routers.patients import router as patients_router
+from app.routers.preferences import router as preferences_router
 from app.routers.schedule import router as schedule_router
 from app.routers.task_definitions import router as task_definitions_router
 from app.routers.tasks import router as tasks_router
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="HackEurope2026 Backend", version="0.2.0")
 app.include_router(patients_router)
+app.include_router(preferences_router)
 app.include_router(task_definitions_router)
 app.include_router(tasks_router)
 app.include_router(schedule_router)

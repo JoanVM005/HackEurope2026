@@ -4,7 +4,7 @@ import logging
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 
 from app.db.supabase_client import (
     NotFoundError,
@@ -17,6 +17,7 @@ from app.models.schemas import (
     SchedulePlanResponse,
 )
 from app.services.planner import PlannerService, PlannerValidationError
+from app.services.preferences_service import PreferencesService, get_preferences_service
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
 logger = logging.getLogger(__name__)
@@ -25,16 +26,22 @@ logger = logging.getLogger(__name__)
 def get_planner_service(
     repository: SupabaseRepository = Depends(get_repository),
     llm_client: OpenAIPlannerClient = Depends(get_openai_planner_client),
+    preferences_service: PreferencesService = Depends(get_preferences_service),
 ) -> PlannerService:
-    return PlannerService(repository=repository, llm_client=llm_client)
+    return PlannerService(
+        repository=repository,
+        llm_client=llm_client,
+        preferences_service=preferences_service,
+    )
 
 
 @router.post("", response_model=SchedulePlanResponse)
 def plan_schedule(
+    x_doctor_id: str | None = Header(default=None, alias="X-Doctor-Id"),
     planner_service: PlannerService = Depends(get_planner_service),
 ) -> SchedulePlanResponse:
     try:
-        return planner_service.replan_and_sync()
+        return planner_service.replan_and_sync(doctor_id=x_doctor_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except PlannerValidationError as exc:

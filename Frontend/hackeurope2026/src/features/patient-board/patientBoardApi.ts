@@ -1,10 +1,5 @@
 import type { PatientCardData, PatientTaskData, TaskDefinitionData, TaskStatus } from './types'
-
-const API_PREFIX = '/api'
-
-interface ApiErrorBody {
-  detail?: string
-}
+import { apiRequest } from '../../lib/apiClient'
 
 interface PatientResponseDto {
   id: string
@@ -61,35 +56,6 @@ interface CreatePatientTaskPayload {
 
 interface UpdatePatientTaskPayload {
   status: Extract<TaskStatus, 'pending' | 'cancelled'>
-}
-
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_PREFIX}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  })
-
-  if (!response.ok) {
-    let message = `HTTP ${response.status}`
-    try {
-      const body = (await response.json()) as ApiErrorBody
-      if (body.detail) {
-        message = body.detail
-      }
-    } catch {
-      message = response.statusText || message
-    }
-    throw new Error(message)
-  }
-
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  return (await response.json()) as T
 }
 
 function toDatetimeLocal(value: string | null): string {

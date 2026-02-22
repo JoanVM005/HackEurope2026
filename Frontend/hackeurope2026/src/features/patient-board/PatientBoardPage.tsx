@@ -9,13 +9,14 @@ import {
   listTaskDefinitions,
   toIsoFromDatetimeLocal,
 } from './patientBoardApi'
+import type { Clinician } from '../../types/clinician'
 import type { PatientCardData, TaskDefinitionData } from './types'
 import './patientBoard.css'
 
 interface PatientBoardPageProps {
   onCreateSchedule?: () => void
-  clinicians: Clinician[]
-  onCliniciansChange: (clinicians: Clinician[]) => void
+  clinicians?: Clinician[]
+  onCliniciansChange?: (clinicians: Clinician[]) => void
 }
 
 export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageProps) {
@@ -286,11 +287,4 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
       ) : null}
     </main>
   )
-}
-
-function createClinicianId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-  return `clin-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }

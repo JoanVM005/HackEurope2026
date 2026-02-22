@@ -131,6 +131,20 @@ class SupabaseRepository:
 
         return PatientTaskResponse.model_validate(payload)
 
+    @staticmethod
+    def _parse_patient_row(row: dict[str, Any]) -> PatientResponse:
+        payload = {
+            "id": row.get("id"),
+            "patient_id": row.get("patient_id"),
+            "first_name": row.get("first_name"),
+            "last_name": row.get("last_name"),
+            "description": row.get("description"),
+            "admitted_at": row.get("admitted_at"),
+            "created_at": row.get("created_at"),
+            "updated_at": row.get("updated_at"),
+        }
+        return PatientResponse.model_validate(payload)
+
     def _parse_schedule_row(self, row: dict[str, Any]) -> ScheduleItemResponse:
         payload = dict(row)
         patient_info = self._as_single_relation(payload.pop("patients", None))
@@ -241,7 +255,7 @@ class SupabaseRepository:
         patient = self._first_or_none(response.data)
         if not patient:
             raise NotFoundError(f"Patient '{patient_external_id}' not found")
-        return PatientResponse.model_validate(patient)
+        return self._parse_patient_row(patient)
 
     def get_patients_by_external_ids(
         self,
@@ -254,14 +268,14 @@ class SupabaseRepository:
             self._client.table("patients").select("*").in_("patient_id", patient_external_ids)
         )
         rows = response.data or []
-        patients = [PatientResponse.model_validate(row) for row in rows]
+        patients = [self._parse_patient_row(row) for row in rows]
         return {patient.patient_id: patient for patient in patients}
 
     def list_patients(self) -> list[PatientResponse]:
         response = self._execute(
             self._client.table("patients").select("*").order("created_at", desc=True)
         )
-        return [PatientResponse.model_validate(row) for row in response.data or []]
+        return [self._parse_patient_row(row) for row in response.data or []]
 
     def create_patient(self, payload: PatientCreate) -> PatientResponse:
         body = payload.model_dump(mode="json")
@@ -278,7 +292,7 @@ class SupabaseRepository:
         row = self._first_or_none(response.data)
         if not row:
             raise UpstreamServiceError("Failed to create patient")
-        return PatientResponse.model_validate(row)
+        return self._parse_patient_row(row)
 
     def update_patient(self, patient_external_id: int, payload: PatientUpdate) -> PatientResponse:
         body = payload.model_dump(exclude_unset=True, mode="json")
@@ -559,6 +573,20 @@ class SupabaseRepository:
             .select("*, patients(patient_id)")
             .gte("scheduled_for", from_utc.isoformat())
             .order("scheduled_for", desc=False)
+        )
+        return [self._parse_schedule_row(row) for row in response.data or []]
+
+    def list_schedule_items_by_source_task_ids(
+        self,
+        source_task_ids: list[UUID],
+    ) -> list[ScheduleItemResponse]:
+        if not source_task_ids:
+            return []
+
+        response = self._execute(
+            self._client.table("schedule_items")
+            .select("*, patients(patient_id)")
+            .in_("source_patient_task_id", [str(task_id) for task_id in source_task_ids])
         )
         return [self._parse_schedule_row(row) for row in response.data or []]
 

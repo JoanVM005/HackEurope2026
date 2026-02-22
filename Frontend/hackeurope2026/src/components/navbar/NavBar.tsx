@@ -5,6 +5,7 @@ const navItems: Array<{ to: string; label: string; end?: boolean }> = [
   { to: '/', label: 'Home', end: true },
   { to: '/patients', label: 'Patients' },
   { to: '/schedule', label: 'Schedule' },
+  { to: '/preferences', label: 'Preferences' },
 ]
 
 export default function NavBar() {

@@ -3,18 +3,27 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Callable
 from uuid import UUID
 
 from app.db.supabase_client import SupabaseRepository
 from app.llm.openai_client import OpenAIPlannerClient
+from app.models.preferences import (
+    AppliedPreferencesSummary,
+    MatchType,
+    PlannerPreferences,
+    PriorityOverrideRule,
+    TimeBlock,
+)
 from app.models.schemas import (
     PlannerLlmCacheUpdate,
     PlannerPatientContext,
     SchedulePlanResponse,
     ScheduleSyncResult,
 )
+from app.services.preferences_service import PreferencesService
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +41,12 @@ class PlannerService:
         self,
         repository: SupabaseRepository,
         llm_client: OpenAIPlannerClient,
+        preferences_service: PreferencesService,
         now_provider: Callable[[], datetime] | None = None,
     ):
         self._repository = repository
         self._llm_client = llm_client
+        self._preferences_service = preferences_service
         self._now_provider = now_provider or (lambda: datetime.now(tz=timezone.utc))
 
     @staticmethod
@@ -45,6 +56,11 @@ class PlannerService:
         if value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc)
         return value.astimezone(timezone.utc)
+
+    @staticmethod
+    def _clock_to_minutes(value: str) -> int:
+        hour_text, minute_text = value.split(":", 1)
+        return int(hour_text) * 60 + int(minute_text)
 
     def calculate_waiting_minutes(self, admitted_at: datetime | None, now_utc: datetime | None = None) -> float:
         reference_time = now_utc or self._now_provider()
@@ -59,9 +75,11 @@ class PlannerService:
         priority: int,
         admitted_at: datetime | None,
         now_utc: datetime | None = None,
+        w_priority: float = 10.0,
+        w_wait: float = 0.05,
     ) -> tuple[float, float]:
         waiting_minutes = self.calculate_waiting_minutes(admitted_at=admitted_at, now_utc=now_utc)
-        score = float(priority) * 10 + waiting_minutes * 0.05
+        score = float(priority) * w_priority + waiting_minutes * w_wait
         return waiting_minutes, score
 
     def _clamp_hour(self, hour: int) -> int:
@@ -76,7 +94,6 @@ class PlannerService:
         else:
             now_utc = now_utc.astimezone(timezone.utc)
 
-        # Planning must always start from 09:00 and move forward hour by hour.
         if now_utc.hour > self.END_HOUR:
             return (now_utc + timedelta(days=1)).replace(
                 hour=self.START_HOUR, minute=0, second=0, microsecond=0
@@ -232,6 +249,16 @@ class PlannerService:
             UUID(str(existing_by_source[source_task_id]["id"]))
             for source_task_id in (changed_sources | stale_sources)
         ]
+        delete_ids_set = set(delete_ids)
+
+        sources_to_insert = [
+            source_task_id for source_task_id in desired_by_source if source_task_id not in unchanged_sources
+        ]
+        if sources_to_insert:
+            historical_conflicts = self._repository.list_schedule_items_by_source_task_ids(sources_to_insert)
+            for conflict_item in historical_conflicts:
+                delete_ids_set.add(conflict_item.id)
+        delete_ids = list(delete_ids_set)
 
         insert_payload = [
             {
@@ -258,6 +285,45 @@ class PlannerService:
             deleted=len(delete_ids),
         )
 
+    def _is_hour_blocked(self, hour: int, time_blocks: list[TimeBlock]) -> bool:
+        slot_minutes = hour * 60
+        for block in time_blocks:
+            start_minutes = self._clock_to_minutes(block.start)
+            end_minutes = self._clock_to_minutes(block.end)
+            if start_minutes <= slot_minutes < end_minutes:
+                return True
+        return False
+
+    def _apply_priority_overrides(
+        self,
+        patient_description: str,
+        llm_priority: int,
+        rules: list[PriorityOverrideRule],
+        warnings: set[str],
+    ) -> tuple[int, bool]:
+        max_override = llm_priority
+        description_ci = patient_description.lower()
+
+        for rule in rules:
+            if not rule.enabled:
+                continue
+
+            matched = False
+            if rule.match_type == MatchType.contains:
+                matched = rule.pattern.lower() in description_ci
+            elif rule.match_type == MatchType.regex:
+                try:
+                    matched = re.search(rule.pattern, patient_description, flags=re.IGNORECASE) is not None
+                except re.error:
+                    warnings.add(f"invalid_regex_ignored:{rule.pattern}")
+                    continue
+
+            if matched:
+                max_override = max(max_override, int(rule.priority))
+
+        final_priority = max(1, min(5, max_override))
+        return final_priority, final_priority != llm_priority
+
     def _allocate_slot(
         self,
         patient_uuid: UUID,
@@ -266,12 +332,24 @@ class PlannerService:
         preferred_hour: int,
         patient_busy: set[tuple[UUID, date, int]],
         task_busy: set[tuple[UUID, date, int]],
-    ) -> tuple[date, int]:
+        time_blocks: list[TimeBlock],
+    ) -> tuple[date, int, bool]:
+        blocked_shift_used = False
         for day_offset in range(self.MAX_LOOKAHEAD_DAYS + 1):
             current_date = preferred_date + timedelta(days=day_offset)
-            hours = list(range(self.START_HOUR, self.END_HOUR + 1))
+            if day_offset == 0:
+                start_hour = self._clamp_hour(preferred_hour)
+                hours = list(range(start_hour, self.END_HOUR + 1))
+                if start_hour > self.START_HOUR:
+                    hours.extend(range(self.START_HOUR, start_hour))
+            else:
+                hours = list(range(self.START_HOUR, self.END_HOUR + 1))
 
             for hour in hours:
+                if self._is_hour_blocked(hour, time_blocks):
+                    blocked_shift_used = True
+                    continue
+
                 patient_key = (patient_uuid, current_date, hour)
                 task_key = (task_definition_id, current_date, hour)
                 if patient_key in patient_busy:
@@ -281,17 +359,24 @@ class PlannerService:
 
                 patient_busy.add(patient_key)
                 task_busy.add(task_key)
-                return current_date, hour
+                return current_date, hour, blocked_shift_used
 
         raise PlannerValidationError(
             "No available slot found within lookahead window for scheduling constraints"
         )
 
-    def replan_and_sync(self) -> SchedulePlanResponse:
+    def replan_and_sync(self, doctor_id: str | None = None) -> SchedulePlanResponse:
         now_utc = self._now_provider()
         planning_anchor = self._planning_anchor(now_utc)
         contexts = self._build_contexts()
         pending_cache_updates: list[PlannerLlmCacheUpdate] = []
+
+        preference_resolution = self._preferences_service.get_preferences(doctor_id)
+        preferences: PlannerPreferences = preference_resolution.preferences
+        warning_codes: set[str] = set(preference_resolution.warnings)
+
+        overrides_applied_count = 0
+        time_block_shift_count = 0
 
         candidate_items: list[dict[str, object]] = []
         for patient_external_id in sorted(contexts):
@@ -305,7 +390,7 @@ class PlannerService:
                     due_at=task.due_at,
                     admitted_at=context.admitted_at,
                 )
-                priority, _, reason = self._resolve_llm_priority(
+                llm_priority, _, reason = self._resolve_llm_priority(
                     context=context,
                     task_name=task.task_name,
                     cached_priority=task.llm_priority,
@@ -317,10 +402,22 @@ class PlannerService:
                     now_utc=now_utc,
                     pending_cache_updates=pending_cache_updates,
                 )
+
+                effective_priority, override_applied = self._apply_priority_overrides(
+                    patient_description=context.description,
+                    llm_priority=llm_priority,
+                    rules=preferences.priority_overrides,
+                    warnings=warning_codes,
+                )
+                if override_applied:
+                    overrides_applied_count += 1
+
                 _, score = self.calculate_score(
-                    priority=priority,
+                    priority=effective_priority,
                     admitted_at=context.admitted_at,
                     now_utc=now_utc,
+                    w_priority=preferences.scoring_weights.w_priority,
+                    w_wait=preferences.scoring_weights.w_wait,
                 )
                 candidate_items.append(
                     {
@@ -332,7 +429,7 @@ class PlannerService:
                         "source_patient_task_id": task.id,
                         "preferred_date": planning_anchor.date(),
                         "preferred_hour": planning_anchor.hour,
-                        "priority": priority,
+                        "priority": effective_priority,
                         "priority_score": score,
                         "reason": reason,
                     }
@@ -366,14 +463,17 @@ class PlannerService:
 
         planned_rows: list[dict[str, object]] = []
         for item in candidate_items:
-            allocated_date, allocated_hour = self._allocate_slot(
+            allocated_date, allocated_hour, blocked_shift_used = self._allocate_slot(
                 patient_uuid=item["patient_uuid"],
                 task_definition_id=item["task_definition_id"],
                 preferred_date=item["preferred_date"],
                 preferred_hour=item["preferred_hour"],
                 patient_busy=patient_busy,
                 task_busy=task_busy,
+                time_blocks=preferences.time_blocks,
             )
+            if blocked_shift_used:
+                time_block_shift_count += 1
             scheduled_for = self._schedule_datetime(allocated_date, allocated_hour)
             planned_rows.append(
                 {
@@ -382,6 +482,9 @@ class PlannerService:
                     "hour": allocated_hour,
                 }
             )
+
+        if time_block_shift_count > 0:
+            warning_codes.add(f"time_block_shifts:{time_block_shift_count}")
 
         for cache_update in pending_cache_updates:
             self._repository.update_patient_task_llm_cache(cache_update)
@@ -400,14 +503,29 @@ class PlannerService:
         ]
         sync_result = self._sync_schedule(desired_rows=desired_rows, planning_anchor=planning_anchor)
         logger.info(
-            "Scheduler sync completed inserted=%s updated=%s deleted=%s cache_updates=%s",
+            "Scheduler sync completed inserted=%s updated=%s deleted=%s cache_updates=%s doctor_id=%s pref_source=%s",
             sync_result.inserted,
             sync_result.updated,
             sync_result.deleted,
             len(pending_cache_updates),
+            preference_resolution.doctor_id,
+            preference_resolution.source.value,
         )
 
-        return SchedulePlanResponse(items=self._repository.list_schedule_plan_items())
+        applied_preferences = AppliedPreferencesSummary(
+            doctor_id=preference_resolution.doctor_id,
+            source=preference_resolution.source,
+            time_blocks_count=len(preferences.time_blocks),
+            overrides_applied_count=overrides_applied_count,
+            scoring_weights=preferences.scoring_weights,
+            language=preferences.language,
+        )
 
-    def plan_schedule(self) -> SchedulePlanResponse:
-        return self.replan_and_sync()
+        return SchedulePlanResponse(
+            items=self._repository.list_schedule_plan_items(),
+            applied_preferences=applied_preferences,
+            warnings=sorted(warning_codes),
+        )
+
+    def plan_schedule(self, doctor_id: str | None = None) -> SchedulePlanResponse:
+        return self.replan_and_sync(doctor_id=doctor_id)

@@ -1,11 +1,9 @@
-const API_PREFIX = '/api'
-
-interface ApiErrorBody {
-  detail?: string
-}
+import { apiRequest } from '../lib/apiClient'
 
 interface SchedulePlanResponseDto {
   items: ScheduleItemDto[]
+  applied_preferences?: AppliedPreferencesSummaryDto | null
+  warnings?: string[]
 }
 
 interface ScheduleItemDto {
@@ -18,6 +16,18 @@ interface ScheduleItemDto {
   reason: string
 }
 
+interface AppliedPreferencesSummaryDto {
+  doctor_id: string
+  source: 'mem0' | 'default'
+  time_blocks_count: number
+  overrides_applied_count: number
+  scoring_weights: {
+    w_priority: number
+    w_wait: number
+  }
+  language: 'es' | 'en'
+}
+
 export interface ScheduleItem {
   scheduleItemId: string
   taskName: string
@@ -28,31 +38,22 @@ export interface ScheduleItem {
   reason: string
 }
 
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_PREFIX}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  })
-
-  if (!response.ok) {
-    let message = `HTTP ${response.status}`
-    try {
-      const body = (await response.json()) as ApiErrorBody
-      if (body.detail) message = body.detail
-    } catch {
-      message = response.statusText || message
-    }
-    throw new Error(message)
+export interface AppliedPreferencesSummary {
+  doctorId: string
+  source: 'mem0' | 'default'
+  timeBlocksCount: number
+  overridesAppliedCount: number
+  scoringWeights: {
+    wPriority: number
+    wWait: number
   }
+  language: 'es' | 'en'
+}
 
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  return (await response.json()) as T
+export interface ReplanScheduleResult {
+  items: ScheduleItem[]
+  appliedPreferences?: AppliedPreferencesSummary | null
+  warnings: string[]
 }
 
 function mapItem(dto: ScheduleItemDto): ScheduleItem {
@@ -67,6 +68,23 @@ function mapItem(dto: ScheduleItemDto): ScheduleItem {
   }
 }
 
+function mapAppliedPreferences(
+  dto: AppliedPreferencesSummaryDto | null | undefined,
+): AppliedPreferencesSummary | null {
+  if (!dto) return null
+  return {
+    doctorId: dto.doctor_id,
+    source: dto.source,
+    timeBlocksCount: dto.time_blocks_count,
+    overridesAppliedCount: dto.overrides_applied_count,
+    scoringWeights: {
+      wPriority: dto.scoring_weights.w_priority,
+      wWait: dto.scoring_weights.w_wait,
+    },
+    language: dto.language,
+  }
+}
+
 function mapPlan(response: SchedulePlanResponseDto): ScheduleItem[] {
   return response.items.map(mapItem)
 }
@@ -76,9 +94,13 @@ export async function listSchedule(): Promise<ScheduleItem[]> {
   return mapPlan(response)
 }
 
-export async function replanSchedule(): Promise<ScheduleItem[]> {
+export async function replanSchedule(): Promise<ReplanScheduleResult> {
   const response = await apiRequest<SchedulePlanResponseDto>('/schedule', { method: 'POST' })
-  return mapPlan(response)
+  return {
+    items: mapPlan(response),
+    appliedPreferences: mapAppliedPreferences(response.applied_preferences),
+    warnings: response.warnings ?? [],
+  }
 }
 
 export async function listScheduleByDay(day: string): Promise<ScheduleItem[]> {

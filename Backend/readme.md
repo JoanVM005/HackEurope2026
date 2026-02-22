@@ -32,6 +32,10 @@ pip install -r requirements.txt
 - `SUPABASE_KEY` (required)
 - `OPENAI_API_KEY` (required)
 - `OPENAI_MODEL` (default: `gpt-4o-mini`)
+- `MEM0_API_KEY` (optional for read fallback, required to persist `/preferences`)
+- `MEM0_PROJECT_ID` (optional; recommended to isolate memory context)
+- `MEM0_ORG_ID` (optional)
+- `DEFAULT_DOCTOR_ID` (default: `demo-doctor`)
 - `ENV` (default: `dev`)
 - `LOG_LEVEL` (default: `INFO`)
 
@@ -110,6 +114,7 @@ Example assignment payload:
 
 Notes:
 - `POST /schedule` requires no request body.
+- `POST /schedule` reads doctor memory with `X-Doctor-Id` (fallback: `DEFAULT_DOCTOR_ID`).
 - `GET /schedule` returns the same structure as `POST /schedule`.
 - `DELETE /schedule/{schedule_item_id}`:
 1. Cancels the source `patient_task` (if `source_patient_task_id` exists)
@@ -129,9 +134,25 @@ Response shape for `POST /schedule` and `GET /schedule`:
       "priority_score": 41.5,
       "reason": "Time-sensitive lab order"
     }
-  ]
+  ],
+  "applied_preferences": {
+    "doctor_id": "demo-doctor",
+    "source": "mem0",
+    "time_blocks_count": 1,
+    "overrides_applied_count": 2,
+    "scoring_weights": { "w_priority": 10, "w_wait": 0.05 },
+    "language": "es"
+  },
+  "warnings": []
 }
 ```
+
+### Preferences
+- `GET /preferences` (reads from Mem0, or defaults when unavailable/no memory)
+- `POST /preferences` (upsert doctor preferences into Mem0)
+- `priority_overrides` are evaluated against patient description text.
+
+Both endpoints read `X-Doctor-Id` header (fallback: `DEFAULT_DOCTOR_ID`).
 
 ## Prioritization and Scheduling Logic
 1. The planner first attempts strict Structured Outputs (JSON Schema) via OpenAI Responses API.
