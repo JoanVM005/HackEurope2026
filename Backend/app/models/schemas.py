@@ -38,6 +38,11 @@ class PatientCreate(BaseSchema):
     last_name: str = Field(min_length=1, max_length=100)
     description: str = Field(min_length=1, max_length=2000)
     time_preferences: Optional[str] = Field(default=None, min_length=1, max_length=1000)
+    priority_final: int = Field(ge=1, le=5)
+    priority_suggested: Optional[int] = Field(default=None, ge=1, le=5)
+    model_reason: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    confidence: Optional[float] = Field(default=None, ge=0, le=1)
+    override_reason: Optional[str] = Field(default=None, min_length=5, max_length=200)
     admitted_at: Optional[datetime] = None
 
     @field_validator("admitted_at", mode="before")
@@ -45,12 +50,25 @@ class PatientCreate(BaseSchema):
     def normalize_admitted_at(cls, value: datetime | str | None) -> datetime | None:
         return _normalize_datetime(value)
 
+    @model_validator(mode="after")
+    def validate_priority_override(self) -> "PatientCreate":
+        if self.priority_suggested is None:
+            return self
+        if self.priority_final != self.priority_suggested and not self.override_reason:
+            raise ValueError("override_reason is required when priority_final differs from priority_suggested")
+        return self
+
 
 class PatientUpdate(BaseSchema):
     first_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     last_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, min_length=1, max_length=2000)
     time_preferences: Optional[str] = Field(default=None, min_length=1, max_length=1000)
+    priority_final: Optional[int] = Field(default=None, ge=1, le=5)
+    priority_suggested: Optional[int] = Field(default=None, ge=1, le=5)
+    model_reason: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    confidence: Optional[float] = Field(default=None, ge=0, le=1)
+    override_reason: Optional[str] = Field(default=None, min_length=5, max_length=200)
     admitted_at: Optional[datetime] = None
 
     @field_validator("admitted_at", mode="before")
@@ -64,6 +82,14 @@ class PatientUpdate(BaseSchema):
             raise ValueError("At least one field must be provided")
         return self
 
+    @model_validator(mode="after")
+    def validate_priority_override(self) -> "PatientUpdate":
+        if self.priority_final is None or self.priority_suggested is None:
+            return self
+        if self.priority_final != self.priority_suggested and not self.override_reason:
+            raise ValueError("override_reason is required when priority_final differs from priority_suggested")
+        return self
+
 
 class PatientResponse(BaseSchema):
     id: UUID
@@ -72,9 +98,34 @@ class PatientResponse(BaseSchema):
     last_name: str
     description: str
     time_preferences: Optional[str] = None
+    priority_final: int = Field(ge=1, le=5)
+    priority_suggested: Optional[int] = Field(default=None, ge=1, le=5)
+    model_reason: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    confidence: Optional[float] = Field(default=None, ge=0, le=1)
+    override_reason: Optional[str] = Field(default=None, min_length=5, max_length=200)
     admitted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
+
+
+class PriorityPreviewRequest(BaseSchema):
+    first_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    last_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    description: str = Field(min_length=1, max_length=2000)
+    time_preferences: Optional[str] = Field(default=None, min_length=1, max_length=1000)
+    admitted_at: Optional[datetime] = None
+    task_names: Optional[list[str]] = None
+
+    @field_validator("admitted_at", mode="before")
+    @classmethod
+    def normalize_admitted_at(cls, value: datetime | str | None) -> datetime | None:
+        return _normalize_datetime(value)
+
+
+class PriorityPreviewResponse(BaseSchema):
+    suggested_priority: int = Field(ge=1, le=5)
+    confidence: float = Field(ge=0, le=1)
+    model_reason: str = Field(min_length=1, max_length=200)
 
 
 class TaskDefinitionCreate(BaseSchema):

@@ -10,7 +10,14 @@ from app.db.supabase_client import (
     ValidationError,
     get_repository,
 )
-from app.models.schemas import PatientCreate, PatientResponse, PatientUpdate
+from app.llm.openai_client import get_openai_planner_client
+from app.models.schemas import (
+    PatientCreate,
+    PatientResponse,
+    PatientUpdate,
+    PriorityPreviewRequest,
+    PriorityPreviewResponse,
+)
 
 router = APIRouter(tags=["patients"])
 
@@ -80,3 +87,29 @@ def delete_patient(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except UpstreamServiceError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+@router.post("/patients/priority-preview", response_model=PriorityPreviewResponse)
+def preview_priority(
+    payload: PriorityPreviewRequest,
+) -> PriorityPreviewResponse:
+    llm_client = get_openai_planner_client()
+
+    summary_parts = []
+    if payload.time_preferences:
+        summary_parts.append(f"time_preferences={payload.time_preferences}")
+    if payload.admitted_at:
+        summary_parts.append(f"admitted_at={payload.admitted_at.isoformat()}")
+    if payload.task_names:
+        summary_parts.append(f"tasks={', '.join(payload.task_names)}")
+
+    task_details = "; ".join(summary_parts) if summary_parts else None
+    llm_result = llm_client.estimate_priority(
+        patient_description=payload.description,
+        task_title="Initial patient intake priority",
+        task_details=task_details,
+    )
+
+    return PriorityPreviewResponse(
+        suggested_priority=llm_result.priority,
+        confidence=llm_result.confidence,
+        model_reason=llm_result.reason,
+    )

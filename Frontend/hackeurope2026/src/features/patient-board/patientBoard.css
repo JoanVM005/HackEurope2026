@@ -418,6 +418,133 @@
   gap: 0.55rem;
 }
 
+.priority-review__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: rgb(2 2 2 / 52%);
+  cursor: pointer;
+}
+
+.priority-review {
+  position: fixed;
+  z-index: 95;
+  top: 50%;
+  left: 50%;
+  width: min(32rem, calc(100vw - 2rem));
+  transform: translate(-50%, -50%);
+  border: 1px solid color-mix(in srgb, var(--silver) 76%, var(--primary) 24%);
+  border-radius: 16px;
+  background: var(--white);
+  box-shadow: 0 20px 40px color-mix(in srgb, var(--ink) 24%, transparent);
+  padding: 1rem;
+}
+
+.priority-review__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.priority-review__header h2 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.priority-review__close {
+  border: 1px solid color-mix(in srgb, var(--silver) 70%, var(--primary) 30%);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--primary);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+}
+
+.priority-review__hint {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.priority-review__message {
+  margin: 0 0 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--accent-orange) 58%, var(--silver) 42%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-orange) 14%, var(--white) 86%);
+  color: color-mix(in srgb, var(--accent-orange) 50%, var(--ink) 50%);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.priority-review__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.priority-review__grid span,
+.priority-review__override span,
+.priority-review__reason span {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.priority-review__grid input,
+.priority-review__override input {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--silver) 70%, var(--primary) 30%);
+  border-radius: 10px;
+  background: var(--white);
+  padding: 0.62rem 0.7rem;
+  color: var(--ink);
+  font: inherit;
+}
+
+.priority-review__reason {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-cyan) 12%, var(--white) 88%);
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 20%, var(--silver) 80%);
+}
+
+.priority-review__reason p {
+  margin: 0 0 0.35rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.priority-review__reason small {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.priority-review__override {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.priority-review__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 .patient-board__empty {
   margin: 0;
   border: 1px dashed color-mix(in srgb, var(--accent-blue) 58%, var(--silver) 42%);

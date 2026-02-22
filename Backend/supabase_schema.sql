@@ -24,6 +24,11 @@ create table if not exists public.patients (
   last_name text not null,
   description text not null,
   time_preferences text,
+  priority_final int not null default 3,
+  priority_suggested int,
+  model_reason text,
+  confidence double precision,
+  override_reason text,
   admitted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -31,6 +36,34 @@ create table if not exists public.patients (
 
 alter table public.patients
   add column if not exists time_preferences text;
+alter table public.patients
+  add column if not exists priority_final int;
+alter table public.patients
+  add column if not exists priority_suggested int;
+alter table public.patients
+  add column if not exists model_reason text;
+alter table public.patients
+  add column if not exists confidence double precision;
+alter table public.patients
+  add column if not exists override_reason text;
+
+alter table public.patients
+  drop constraint if exists chk_patients_priority_final;
+alter table public.patients
+  add constraint chk_patients_priority_final
+  check (priority_final between 1 and 5);
+
+alter table public.patients
+  drop constraint if exists chk_patients_priority_suggested;
+alter table public.patients
+  add constraint chk_patients_priority_suggested
+  check (priority_suggested is null or (priority_suggested between 1 and 5));
+
+alter table public.patients
+  drop constraint if exists chk_patients_confidence;
+alter table public.patients
+  add constraint chk_patients_confidence
+  check (confidence is null or (confidence between 0 and 1));
 
 drop trigger if exists trg_patients_updated_at on public.patients;
 create trigger trg_patients_updated_at
@@ -40,6 +73,25 @@ execute function public.set_updated_at();
 
 create index if not exists idx_patients_patient_id
 on public.patients(patient_id);
+
+-- -------------------------
+-- patient_priority_feedback (audit log)
+-- -------------------------
+create table if not exists public.patient_priority_feedback (
+  id uuid primary key default gen_random_uuid(),
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  doctor_id text,
+  suggested_priority int,
+  final_priority int not null,
+  model_reason text,
+  confidence double precision,
+  override_reason text,
+  context jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_patient_priority_feedback_patient_id
+on public.patient_priority_feedback(patient_id);
 
 -- -------------------------
 -- task_definitions (catalog)

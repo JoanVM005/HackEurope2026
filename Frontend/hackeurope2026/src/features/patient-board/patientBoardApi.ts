@@ -1,13 +1,18 @@
-import type { PatientCardData, PatientTaskData, TaskDefinitionData, TaskStatus } from './types'
+import type { PatientCardData, PatientTaskData, PriorityPreviewData, TaskDefinitionData, TaskStatus } from './types'
 import { apiRequest } from '../../lib/apiClient'
 
 interface PatientResponseDto {
   id: string
-  patient_id: string
+  patient_id: number
   first_name: string
   last_name: string
   description: string
   time_preferences?: string | null
+  priority_final: number
+  priority_suggested?: number | null
+  model_reason?: string | null
+  confidence?: number | null
+  override_reason?: string | null
   admitted_at: string | null
   created_at: string
   updated_at: string
@@ -33,11 +38,16 @@ interface PatientTaskResponseDto {
 }
 
 interface CreatePatientPayload {
-  patient_id: string
+  patient_id: number
   first_name: string
   last_name: string
   description: string
   time_preferences?: string | null
+  priority_final: number
+  priority_suggested?: number | null
+  model_reason?: string | null
+  confidence?: number | null
+  override_reason?: string | null
   admitted_at: string | null
 }
 
@@ -46,7 +56,27 @@ interface UpdatePatientPayload {
   last_name?: string
   description?: string
   time_preferences?: string | null
+  priority_final?: number
+  priority_suggested?: number | null
+  model_reason?: string | null
+  confidence?: number | null
+  override_reason?: string | null
   admitted_at?: string | null
+}
+
+interface PriorityPreviewRequestPayload {
+  first_name?: string
+  last_name?: string
+  description: string
+  time_preferences?: string | null
+  admitted_at?: string | null
+  task_names?: string[]
+}
+
+interface PriorityPreviewResponseDto {
+  suggested_priority: number
+  confidence: number
+  model_reason: string
 }
 
 interface CreatePatientTaskPayload {
@@ -67,7 +97,7 @@ function toDatetimeLocal(value: string | null): string {
   return local.toISOString().slice(0, 16)
 }
 
-function parseNumericPatientId(value: string): number {
+function parseNumericPatientId(value: string | number): number {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
@@ -81,6 +111,11 @@ function mapPatientDtoToUi(dto: PatientResponseDto): PatientCardData {
     lastName: dto.last_name,
     description: dto.description,
     timePreferences: dto.time_preferences ?? '',
+    priorityFinal: dto.priority_final,
+    prioritySuggested: dto.priority_suggested ?? null,
+    modelReason: dto.model_reason ?? null,
+    confidence: dto.confidence ?? null,
+    overrideReason: dto.override_reason ?? null,
     admissionTimestamp: toDatetimeLocal(dto.admitted_at),
   }
 }
@@ -122,7 +157,7 @@ export async function createPatient(payload: CreatePatientPayload): Promise<Pati
   return mapPatientDtoToUi(response)
 }
 
-export async function updatePatient(patientExternalId: string, payload: UpdatePatientPayload): Promise<PatientCardData> {
+export async function updatePatient(patientExternalId: number, payload: UpdatePatientPayload): Promise<PatientCardData> {
   const response = await apiRequest<PatientResponseDto>(`/patients/${encodeURIComponent(patientExternalId)}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
@@ -130,7 +165,20 @@ export async function updatePatient(patientExternalId: string, payload: UpdatePa
   return mapPatientDtoToUi(response)
 }
 
-export async function deletePatient(patientExternalId: string): Promise<void> {
+export async function previewPatientPriority(payload: PriorityPreviewRequestPayload): Promise<PriorityPreviewData> {
+  const response = await apiRequest<PriorityPreviewResponseDto>('/patients/priority-preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return {
+    suggestedPriority: response.suggested_priority,
+    confidence: response.confidence,
+    modelReason: response.model_reason,
+  }
+}
+
+export async function deletePatient(patientExternalId: number): Promise<void> {
   await apiRequest<void>(`/patients/${encodeURIComponent(patientExternalId)}`, {
     method: 'DELETE',
   })
@@ -142,7 +190,7 @@ export async function listTaskDefinitions(): Promise<TaskDefinitionData[]> {
 }
 
 export async function listPatientTasksByStatus(
-  patientExternalId: string,
+  patientExternalId: number,
   status: TaskStatus,
 ): Promise<PatientTaskData[]> {
   const response = await apiRequest<PatientTaskResponseDto[]>(
@@ -151,7 +199,7 @@ export async function listPatientTasksByStatus(
   return response.map(mapPatientTaskDtoToUi)
 }
 
-export async function createPatientTask(patientExternalId: string, payload: CreatePatientTaskPayload): Promise<PatientTaskData> {
+export async function createPatientTask(patientExternalId: number, payload: CreatePatientTaskPayload): Promise<PatientTaskData> {
   const response = await apiRequest<PatientTaskResponseDto>(`/patients/${encodeURIComponent(patientExternalId)}/tasks`, {
     method: 'POST',
     body: JSON.stringify(payload),

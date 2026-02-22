@@ -133,12 +133,22 @@ class SupabaseRepository:
 
     @staticmethod
     def _parse_patient_row(row: dict[str, Any]) -> PatientResponse:
+        priority_final = row.get("priority_final")
+        if priority_final is None:
+            # Backfill for existing rows that predate priority fields.
+            priority_final = 3
         payload = {
             "id": row.get("id"),
             "patient_id": row.get("patient_id"),
             "first_name": row.get("first_name"),
             "last_name": row.get("last_name"),
             "description": row.get("description"),
+            "time_preferences": row.get("time_preferences"),
+            "priority_final": priority_final,
+            "priority_suggested": row.get("priority_suggested"),
+            "model_reason": row.get("model_reason"),
+            "confidence": row.get("confidence"),
+            "override_reason": row.get("override_reason"),
             "admitted_at": row.get("admitted_at"),
             "created_at": row.get("created_at"),
             "updated_at": row.get("updated_at"),
@@ -292,7 +302,28 @@ class SupabaseRepository:
         row = self._first_or_none(response.data)
         if not row:
             raise UpstreamServiceError("Failed to create patient")
-        return self._parse_patient_row(row)
+        created = self._parse_patient_row(row)
+
+        feedback_payload = {
+            "patient_id": created.id,
+            "doctor_id": None,
+            "suggested_priority": created.priority_suggested,
+            "final_priority": created.priority_final,
+            "model_reason": created.model_reason,
+            "confidence": created.confidence,
+            "override_reason": created.override_reason,
+            "context": {
+                "description": created.description,
+                "time_preferences": created.time_preferences,
+                "admitted_at": created.admitted_at,
+            },
+        }
+        try:
+            self._client.table("patient_priority_feedback").insert(feedback_payload).execute()
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to record patient priority feedback", exc_info=True)
+
+        return created
 
     def update_patient(self, patient_external_id: int, payload: PatientUpdate) -> PatientResponse:
         body = payload.model_dump(exclude_unset=True, mode="json")
