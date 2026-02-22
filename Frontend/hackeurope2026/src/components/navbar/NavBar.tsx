@@ -11,7 +11,7 @@ const navItems: Array<{ to: string; label: string; end?: boolean }> = [
 export default function NavBar() {
   return (
     <header className="app-navbar">
-      <h1 className="app-navbar__title">HackEurope 2026</h1>
+      <h1 className="app-navbar__title">Cliniclár</h1>
       <nav className="app-navbar__nav" aria-label="Main pages">
         {navItems.map((item) => (
           <NavLink

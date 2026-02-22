@@ -649,6 +649,15 @@ class SupabaseRepository:
         )
         return [self._parse_schedule_row(row) for row in response.data or []]
 
+    def list_schedule_items_for_occupancy_from(self, from_utc: datetime) -> list[ScheduleItemResponse]:
+        response = self._execute(
+            self._client.table("schedule_items")
+            .select("*, patients(patient_id)")
+            .gte("scheduled_for", from_utc.isoformat())
+            .order("scheduled_for", desc=False)
+        )
+        return [self._parse_schedule_row(row) for row in response.data or []]
+
     def list_schedule_items_by_source_task_ids(
         self,
         source_task_ids: list[UUID],
@@ -759,7 +768,6 @@ class SupabaseRepository:
         patient_query = (
             self._client.table("schedule_items")
             .select("id")
-            .eq("status", ScheduleItemStatus.pending.value)
             .eq("patient_id", str(patient_id))
             .eq("scheduled_for", slot_iso)
             .limit(1)
@@ -773,7 +781,6 @@ class SupabaseRepository:
         task_query = (
             self._client.table("schedule_items")
             .select("id")
-            .eq("status", ScheduleItemStatus.pending.value)
             .eq("task_definition_id", str(task_definition_id))
             .eq("scheduled_for", slot_iso)
             .limit(1)

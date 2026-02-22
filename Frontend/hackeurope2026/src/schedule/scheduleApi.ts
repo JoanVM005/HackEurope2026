@@ -80,6 +80,11 @@ export interface ReplanScheduleResult {
   warnings: string[]
 }
 
+interface ReplanScheduleRequestPayload {
+  clinic_start_hour: number
+  clinic_end_hour: number
+}
+
 interface CompleteScheduleItemsResponseDto {
   completed_ids: string[]
   skipped_ids: string[]
@@ -276,8 +281,21 @@ async function parseScheduleConflictError(
   }
 }
 
-export async function replanSchedule(): Promise<ReplanScheduleResult> {
-  const response = await apiRequest<SchedulePlanResponseDto>('/schedule', { method: 'POST' })
+export async function replanSchedule(clinicHours?: {
+  clinicStartHour: number
+  clinicEndHour: number
+}): Promise<ReplanScheduleResult> {
+  const body: ReplanScheduleRequestPayload | undefined = clinicHours
+    ? {
+        clinic_start_hour: clinicHours.clinicStartHour,
+        clinic_end_hour: clinicHours.clinicEndHour,
+      }
+    : undefined
+
+  const response = await apiRequest<SchedulePlanResponseDto>('/schedule', {
+    method: 'POST',
+    body: body ? JSON.stringify(body) : undefined,
+  })
   return {
     items: mapPlan(response),
     appliedPreferences: mapAppliedPreferences(response.applied_preferences),

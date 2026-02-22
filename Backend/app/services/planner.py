@@ -145,17 +145,45 @@ class PlannerService:
 
         return None
 
-    def _planning_anchor(self, now_utc: datetime) -> datetime:
+    def _planning_anchor(self, now_utc: datetime, start_hour: int, end_hour: int) -> datetime:
         if now_utc.tzinfo is None:
             now_utc = now_utc.replace(tzinfo=timezone.utc)
         else:
             now_utc = now_utc.astimezone(timezone.utc)
 
-        if now_utc.hour > self.END_HOUR:
+        if now_utc.hour > end_hour:
             return (now_utc + timedelta(days=1)).replace(
-                hour=self.START_HOUR, minute=0, second=0, microsecond=0
+                hour=start_hour, minute=0, second=0, microsecond=0
             )
-        return now_utc.replace(hour=self.START_HOUR, minute=0, second=0, microsecond=0)
+        return now_utc.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+
+    def _resolve_planning_window(
+        self,
+        clinic_start_hour: int | None,
+        clinic_end_hour: int | None,
+    ) -> tuple[int, int]:
+        if clinic_start_hour is None and clinic_end_hour is None:
+            return self.START_HOUR, self.END_HOUR
+        if clinic_start_hour is None or clinic_end_hour is None:
+            raise PlannerValidationError(
+                "clinic_start_hour and clinic_end_hour must be provided together"
+            )
+
+        start_hour = clinic_start_hour
+        end_hour = clinic_end_hour - 1
+
+        if start_hour < self.START_HOUR or start_hour > self.END_HOUR:
+            raise PlannerValidationError(
+                f"clinic_start_hour must be between {self.START_HOUR} and {self.END_HOUR}"
+            )
+        if clinic_end_hour < self.START_HOUR + 1 or clinic_end_hour > self.END_HOUR + 1:
+            raise PlannerValidationError(
+                f"clinic_end_hour must be between {self.START_HOUR + 1} and {self.END_HOUR + 1}"
+            )
+        if end_hour < start_hour:
+            raise PlannerValidationError("clinic_end_hour must be greater than clinic_start_hour")
+
+        return start_hour, end_hour
 
     def _build_context_hash(
         self,
@@ -541,6 +569,8 @@ class PlannerService:
         task_definition_id: UUID,
         preferred_date: date,
         preferred_hour: int,
+        window_start_hour: int,
+        window_end_hour: int,
         patient_busy: set[tuple[UUID, date, int]],
         task_busy: set[tuple[UUID, date, int]],
         time_blocks: list[TimeBlock],
@@ -554,12 +584,12 @@ class PlannerService:
         for day_offset in range(self.MAX_LOOKAHEAD_DAYS + 1):
             current_date = preferred_date + timedelta(days=day_offset)
             if day_offset == 0:
-                start_hour = self._clamp_hour(preferred_hour)
-                hours = list(range(start_hour, self.END_HOUR + 1))
-                if start_hour > self.START_HOUR:
-                    hours.extend(range(self.START_HOUR, start_hour))
+                start_hour = max(window_start_hour, min(window_end_hour, preferred_hour))
+                hours = list(range(start_hour, window_end_hour + 1))
+                if start_hour > window_start_hour:
+                    hours.extend(range(window_start_hour, start_hour))
             else:
-                hours = list(range(self.START_HOUR, self.END_HOUR + 1))
+                hours = list(range(window_start_hour, window_end_hour + 1))
 
             for hour_index, hour in enumerate(hours):
                 if self._is_hour_blocked(hour, time_blocks):
@@ -598,9 +628,22 @@ class PlannerService:
         return selected_date, selected_hour, blocked_shift_used, use_time_preference_bias
 
 
-    def replan_and_sync(self, doctor_id: str | None = None) -> SchedulePlanResponse:
+    def replan_and_sync(
+        self,
+        doctor_id: str | None = None,
+        clinic_start_hour: int | None = None,
+        clinic_end_hour: int | None = None,
+    ) -> SchedulePlanResponse:
         now_utc = self._now_provider()
-        planning_anchor = self._planning_anchor(now_utc)
+        planning_start_hour, planning_end_hour = self._resolve_planning_window(
+            clinic_start_hour=clinic_start_hour,
+            clinic_end_hour=clinic_end_hour,
+        )
+        planning_anchor = self._planning_anchor(
+            now_utc=now_utc,
+            start_hour=planning_start_hour,
+            end_hour=planning_end_hour,
+        )
         contexts = self._build_contexts()
         pending_cache_updates: list[PlannerLlmCacheUpdate] = []
 
@@ -703,7 +746,7 @@ class PlannerService:
         patient_busy: set[tuple[UUID, date, int]] = set()
         task_busy: set[tuple[UUID, date, int]] = set()
 
-        existing_items = self._repository.list_schedule_items_from(planning_anchor)
+        existing_items = self._repository.list_schedule_items_for_occupancy_from(planning_anchor)
         for item in existing_items:
             if item.source_patient_task_id is not None:
                 continue
@@ -711,7 +754,7 @@ class PlannerService:
             if schedule_dt is None:
                 continue
             schedule_hour = schedule_dt.hour
-            if schedule_hour < self.START_HOUR or schedule_hour > self.END_HOUR:
+            if schedule_hour < planning_start_hour or schedule_hour > planning_end_hour:
                 continue
             schedule_date = schedule_dt.date()
             patient_busy.add((item.patient_id, schedule_date, schedule_hour))
@@ -725,6 +768,8 @@ class PlannerService:
                 task_definition_id=item["task_definition_id"],
                 preferred_date=item["preferred_date"],
                 preferred_hour=item["preferred_hour"],
+                window_start_hour=planning_start_hour,
+                window_end_hour=planning_end_hour,
                 patient_busy=patient_busy,
                 task_busy=task_busy,
                 time_blocks=preferences.time_blocks,

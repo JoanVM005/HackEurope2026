@@ -237,14 +237,12 @@ where source_patient_task_id is not null;
 -- Uniqueness constraints (NO date_trunc to avoid IMMUTABLE issue)
 drop index if exists public.uq_schedule_items_patient_hour;
 create unique index uq_schedule_items_patient_hour
-on public.schedule_items (patient_id, scheduled_for)
-where status = 'pending';
+on public.schedule_items (patient_id, scheduled_for);
 
 drop index if exists public.uq_schedule_items_task_hour;
 create unique index uq_schedule_items_task_hour
 on public.schedule_items (task_definition_id, scheduled_for)
-where task_definition_id is not null
-  and status = 'pending';
+where task_definition_id is not null;
 
 -- -------------------------
 -- voice_intake_sessions (voice-first intake workflow)

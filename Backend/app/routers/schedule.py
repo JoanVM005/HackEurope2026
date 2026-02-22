@@ -4,7 +4,7 @@ import logging
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
 
 from app.db.supabase_client import (
     ConflictError,
@@ -27,6 +27,7 @@ from app.models.schemas import (
     ScheduleRescheduleResponse,
     ScheduleRescheduleOptionsResponse,
     ScheduleItemStatus,
+    SchedulePlanRequest,
     SchedulePlanResponse,
 )
 from app.services.planner import PlannerService, PlannerValidationError
@@ -73,11 +74,16 @@ def _ensure_pending_remove_item(
 
 @router.post("", response_model=SchedulePlanResponse)
 def plan_schedule(
+    payload: SchedulePlanRequest | None = Body(default=None),
     x_doctor_id: str | None = Header(default=None, alias="X-Doctor-Id"),
     planner_service: PlannerService = Depends(get_planner_service),
 ) -> SchedulePlanResponse:
     try:
-        return planner_service.replan_and_sync(doctor_id=x_doctor_id)
+        return planner_service.replan_and_sync(
+            doctor_id=x_doctor_id,
+            clinic_start_hour=payload.clinic_start_hour if payload else None,
+            clinic_end_hour=payload.clinic_end_hour if payload else None,
+        )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except PlannerValidationError as exc:

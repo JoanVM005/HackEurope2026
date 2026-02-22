@@ -33,9 +33,9 @@ type ActiveRemoveFlow = {
 }
 
 const STEP_MINUTES = 60
-const MIN_TIME = 0
-const MAX_START_TIME = 22 * 60
-const MAX_END_TIME = 23 * 60
+const MIN_TIME = 9 * 60
+const MAX_START_TIME = 21 * 60
+const MAX_END_TIME = 22 * 60
 
 function sortPlanItems(items: ScheduleItem[]): ScheduleItem[] {
   return [...items].sort((a, b) => {
@@ -125,7 +125,7 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
   }, [items])
 
   const hiddenByHoursCount = useMemo(
-    () => items.reduce((count, item) => (slotHours.has(item.hour) ? count : count + 1), 0),
+    () => items.reduce((count, item) => (item.status === 'pending' && !slotHours.has(item.hour) ? count + 1 : count), 0),
     [items, slotHours],
   )
 
@@ -182,7 +182,12 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
     setNoticeMessage(null)
 
     try {
-      const result = await replanSchedule()
+      const clinicStartHour = Number(startTime.slice(0, 2))
+      const clinicEndHour = Number(endTime.slice(0, 2))
+      const result = await replanSchedule({
+        clinicStartHour,
+        clinicEndHour,
+      })
       setLastReplan(result)
       setNoticeMessage('Schedule replanned successfully.')
       await loadSchedule()
@@ -335,8 +340,8 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
               <input
                 type="time"
                 step={STEP_MINUTES * 60}
-                min="00:00"
-                max="22:00"
+                min="09:00"
+                max="21:00"
                 value={startTime}
                 onChange={(event) => {
                   const newStart = clamp(minutesFromTime(event.target.value), MIN_TIME, MAX_START_TIME)
@@ -354,8 +359,8 @@ export function ScheduleGrid({ onConfigurePatients }: ScheduleGridProps) {
               <input
                 type="time"
                 step={STEP_MINUTES * 60}
-                min="01:00"
-                max="23:00"
+                min="10:00"
+                max="22:00"
                 value={endTime}
                 onChange={(event) => {
                   const newEnd = clamp(minutesFromTime(event.target.value), STEP_MINUTES, MAX_END_TIME)

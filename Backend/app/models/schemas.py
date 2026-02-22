@@ -332,6 +332,21 @@ class SchedulePlanResponse(BaseSchema):
     warnings: list[str] = Field(default_factory=list)
 
 
+class SchedulePlanRequest(BaseSchema):
+    clinic_start_hour: Optional[int] = Field(default=None, ge=9, le=21)
+    clinic_end_hour: Optional[int] = Field(default=None, ge=10, le=22)
+
+    @model_validator(mode="after")
+    def validate_hours(self) -> "SchedulePlanRequest":
+        if self.clinic_start_hour is None and self.clinic_end_hour is None:
+            return self
+        if self.clinic_start_hour is None or self.clinic_end_hour is None:
+            raise ValueError("clinic_start_hour and clinic_end_hour must be provided together")
+        if self.clinic_end_hour <= self.clinic_start_hour:
+            raise ValueError("clinic_end_hour must be greater than clinic_start_hour")
+        return self
+
+
 class HealthResponse(BaseSchema):
     status: str
     env: str

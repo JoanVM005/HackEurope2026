@@ -79,11 +79,17 @@ function PatientDetailsPopupContent({
   const [taskSnapshot, setTaskSnapshot] = useState<Record<string, TaskSnapshot>>({})
   const [isLoadingTasks, setIsLoadingTasks] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isSaving) {
+      if (event.key === 'Escape' && !isSaving && !isDeleting) {
+        if (isDeleteConfirmOpen) {
+          setIsDeleteConfirmOpen(false)
+          return
+        }
         onClose()
       }
     }
@@ -92,7 +98,7 @@ function PatientDetailsPopupContent({
     return () => {
       window.removeEventListener('keydown', onKeyDown)
     }
-  }, [isSaving, onClose])
+  }, [isDeleteConfirmOpen, isDeleting, isSaving, onClose])
 
   useEffect(() => {
     setFirstNameDraft(patient.firstName)
@@ -100,6 +106,7 @@ function PatientDetailsPopupContent({
     setDescriptionDraft(patient.description)
     setTimePreferencesDraft(patient.timePreferences)
     setAdmissionTimestampDraft(patient.admissionTimestamp)
+    setIsDeleteConfirmOpen(false)
   }, [patient])
 
   useEffect(() => {
@@ -256,16 +263,23 @@ function PatientDetailsPopupContent({
   }
 
   const removePatient = async () => {
-    const confirmed = window.confirm('Delete this patient? This action cannot be undone.')
-    if (!confirmed) return
+    if (isSaving || isDeleting) return
+    setIsDeleteConfirmOpen(true)
+  }
 
+  const confirmDeletePatient = async () => {
+    if (isSaving || isDeleting) return
+    setIsDeleting(true)
     setErrorMessage(null)
     try {
       await onDelete(patient.externalPatientId)
+      setIsDeleteConfirmOpen(false)
       onClose()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete patient.'
       setErrorMessage(message)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -276,13 +290,19 @@ function PatientDetailsPopupContent({
         className="patient-popup__overlay"
         aria-label="Close patient details"
         onClick={() => {
-          if (!isSaving) onClose()
+          if (!isSaving && !isDeleting && !isDeleteConfirmOpen) onClose()
         }}
       />
       <section className="patient-popup" role="dialog" aria-modal="true" aria-label="Patient details">
         <header className="patient-popup__header">
           <h2>Patient details</h2>
-          <button type="button" className="patient-popup__close" aria-label="Close popup" onClick={onClose} disabled={isSaving}>
+          <button
+            type="button"
+            className="patient-popup__close"
+            aria-label="Close popup"
+            onClick={onClose}
+            disabled={isSaving || isDeleting}
+          >
             <span aria-hidden>×</span>
           </button>
         </header>
@@ -347,7 +367,7 @@ function PatientDetailsPopupContent({
                 <input
                   type="checkbox"
                   checked={Boolean(taskDraft[taskDefinition.id])}
-                  disabled={isDone || isLoadingTasks || isSaving}
+                  disabled={isDone || isLoadingTasks || isSaving || isDeleting}
                   onChange={() => toggleTask(taskDefinition.id)}
                 />
                 <span className="patient-popup__task-name">{taskDefinition.name}</span>
@@ -362,20 +382,63 @@ function PatientDetailsPopupContent({
         </fieldset>
 
         <footer className="patient-popup__actions">
-          <button type="button" className="card-btn card-btn--danger" disabled={isSaving} onClick={removePatient}>
+          <button type="button" className="card-btn card-btn--danger" disabled={isSaving || isDeleting} onClick={removePatient}>
             Remove
           </button>
           <div className="patient-popup__actions-right">
-            <button type="button" className="card-btn" disabled={isSaving} onClick={onClose}>
+            <button type="button" className="card-btn" disabled={isSaving || isDeleting} onClick={onClose}>
               Cancel
             </button>
-            <button type="button" className="card-btn card-btn--primary" disabled={isSaveDisabled} onClick={saveChanges}>
+            <button
+              type="button"
+              className="card-btn card-btn--primary"
+              disabled={isSaveDisabled || isDeleting}
+              onClick={saveChanges}
+            >
               Save
             </button>
           </div>
         </footer>
       </section>
-      <LoadingOverlay open={isSaving} message="Saving patient..." ariaLabel="Saving patient" />
+      {isDeleteConfirmOpen ? (
+        <>
+          <button
+            type="button"
+            className="priority-review__overlay"
+            aria-label="Close delete confirmation"
+            onClick={() => {
+              if (!isDeleting) setIsDeleteConfirmOpen(false)
+            }}
+          />
+          <section className="priority-review" role="dialog" aria-modal="true" aria-label="Delete patient confirmation">
+            <header className="priority-review__header">
+              <h2>Delete patient</h2>
+              <button
+                type="button"
+                className="priority-review__close"
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                disabled={isDeleting}
+              >
+                <span aria-hidden>×</span>
+              </button>
+            </header>
+            <p className="priority-review__hint">This action cannot be undone. Are you sure you want to delete this patient?</p>
+            <footer className="priority-review__actions">
+              <button type="button" className="card-btn" onClick={() => setIsDeleteConfirmOpen(false)} disabled={isDeleting}>
+                Cancel
+              </button>
+              <button type="button" className="card-btn card-btn--danger" onClick={confirmDeletePatient} disabled={isDeleting}>
+                Delete
+              </button>
+            </footer>
+          </section>
+        </>
+      ) : null}
+      <LoadingOverlay
+        open={isSaving || isDeleting}
+        message={isDeleting ? 'Deleting patient...' : 'Saving patient...'}
+        ariaLabel={isDeleting ? 'Deleting patient' : 'Saving patient'}
+      />
     </>
   )
 }
