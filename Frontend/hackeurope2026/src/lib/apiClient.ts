@@ -1,4 +1,5 @@
-const API_PREFIX = '/api'
+const RAW_API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').trim()
+const API_PREFIX = RAW_API_BASE ? RAW_API_BASE.replace(/\/$/, '') : '/api'
 const DEFAULT_DOCTOR_ID = (import.meta.env.VITE_DOCTOR_ID ?? 'demo-doctor').trim() || 'demo-doctor'
 
 interface ApiErrorBody {

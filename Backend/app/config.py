@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     default_doctor_id: str = Field(default="demo-doctor", alias="DEFAULT_DOCTOR_ID")
     env: str = Field(default="dev", alias="ENV")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    cors_allow_origins: str | None = Field(default=None, alias="CORS_ALLOW_ORIGINS")
 
     model_config = SettingsConfigDict(
         env_file=".env",

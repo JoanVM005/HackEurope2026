@@ -4,6 +4,7 @@ import logging
 from time import perf_counter
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import configure_logging, get_settings
 from app.models.schemas import HealthResponse
@@ -18,6 +19,23 @@ configure_logging(settings.log_level)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="HackEurope2026 Backend", version="0.2.0")
+
+default_origins = {
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://cliniclar-l0yqlbnoh-talens-projects-00dca8ad.vercel.app",
+}
+if settings.cors_allow_origins:
+    env_origins = {origin.strip() for origin in settings.cors_allow_origins.split(",") if origin.strip()}
+    default_origins.update(env_origins)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=sorted(default_origins),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(patients_router)
 app.include_router(preferences_router)
 app.include_router(task_definitions_router)
