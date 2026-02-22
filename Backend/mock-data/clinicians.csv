@@ -1,0 +1,9 @@
+clinician_id,name,specialty,organization,years_experience,available_modes
+c5bc7aa5-f795-54ea-939d-27652ce4252a,Dr. Nancy Watson,ENT,Elm Street Surgery,34,"Face-to-Face,Telephone,Video"
+9b887485-37fc-5d5a-85d5-eae537b4b018,Dr. Sarah Walker,Orthopedics,Elm Street Surgery,21,"Face-to-Face,Telephone,Video"
+40ad9040-2bec-5c4a-8bbb-70e1960a8490,Dr. Linda Jackson,Internal Medicine,Elm Street Surgery,3,"Face-to-Face,Telephone"
+c3d5f4f7-7772-5d22-948c-4f2d119c49b8,Dr. Robert Clarke,ENT,Elm Street Surgery,32,"Face-to-Face,Telephone"
+739b93ec-d7c9-51df-8436-b7c9f479dec9,Dr. Margaret Hill,Cardiology,City Health Centre,17,Face-to-Face
+6ac08d47-85b5-5188-99c5-82ab2e3cd1c9,Dr. Jessica Moore,General Practice,Central Hospital Outpatient,4,"Face-to-Face,Telephone,Video"
+1e12ce77-8123-5fd1-b484-065ec3bb85df,Dr. Thomas White,Psychiatry,Central Hospital Outpatient,14,"Face-to-Face,Video"
+e935811b-2ec0-5be8-a259-d33314e2a7bd,Dr. Michael Evans,General Practice,Central Hospital Outpatient,21,Face-to-Face

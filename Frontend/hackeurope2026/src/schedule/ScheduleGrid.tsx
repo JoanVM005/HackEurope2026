@@ -454,18 +454,17 @@ function Row({
             {itemsForCell.length > 0 ? (
               <div className="schedule-card-stack">
                 {itemsForCell.map((item) => {
-                  const patientTone = patientToneFor(item.patientName)
+                  const priorityTone = priorityToneFor(item.priority)
                   const cardStyle = {
-                    '--patient-accent': patientTone.accent,
-                    '--patient-surface': patientTone.surface,
-                    '--patient-border': patientTone.border,
+                    '--patient-accent': priorityTone.accent,
+                    '--patient-surface': priorityTone.surface,
+                    '--patient-border': priorityTone.border,
                   } as CSSProperties
 
                   return (
                     <article key={item.scheduleItemId} className="schedule-card" style={cardStyle}>
                       <strong>{item.patientName}</strong>
-                      <span className="schedule-card__meta">Priority {item.priorityScore.toFixed(1)}</span>
-                      <span className="schedule-card__meta">Original {formatHour(item.hour)}</span>
+                      <span className="schedule-card__meta">Priority {item.priority}</span>
                       {showDayLabel ? <span className="schedule-card__meta">Day {formatScheduleDay(item.day)}</span> : null}
                       <p>{item.reason}</p>
                       <button
@@ -505,27 +504,21 @@ function normalizeTaskKey(taskName: string): string {
   return taskName.trim().toLowerCase()
 }
 
-type PatientTone = {
+type PriorityTone = {
   accent: string
   surface: string
   border: string
 }
 
-const PATIENT_TONES: PatientTone[] = [
-  { accent: '#b42318', surface: '#fff2f0', border: '#f9c8c1' },
-  { accent: '#b54708', surface: '#fff6eb', border: '#f7d6ae' },
-  { accent: '#1f7a3d', surface: '#effaf1', border: '#c2e9cb' },
-  { accent: '#0f6cbd', surface: '#eff6ff', border: '#c6ddff' },
-  { accent: '#6e49cb', surface: '#f4f0ff', border: '#d8caf8' },
-  { accent: '#ad2454', surface: '#fff0f6', border: '#f6c7dc' },
-  { accent: '#007a7a', surface: '#edfbfb', border: '#c2ebeb' },
-  { accent: '#6a4c1e', surface: '#faf5ee', border: '#e8d9c1' },
-]
+const PRIORITY_TONES: Record<number, PriorityTone> = {
+  5: { accent: '#b42318', surface: '#fff2f0', border: '#f9c8c1' },
+  4: { accent: '#b54708', surface: '#fff6eb', border: '#f7d6ae' },
+  3: { accent: '#1f7a3d', surface: '#effaf1', border: '#c2e9cb' },
+  2: { accent: '#0f6cbd', surface: '#eff6ff', border: '#c6ddff' },
+  1: { accent: '#0b5fa5', surface: '#eef6ff', border: '#c1d9ff' },
+}
 
-function patientToneFor(patientName: string): PatientTone {
-  let hash = 0
-  for (let i = 0; i < patientName.length; i += 1) {
-    hash = (hash * 31 + patientName.charCodeAt(i)) >>> 0
-  }
-  return PATIENT_TONES[hash % PATIENT_TONES.length]
+function priorityToneFor(priority: number): PriorityTone {
+  const normalized = clamp(Math.round(priority), 1, 5)
+  return PRIORITY_TONES[normalized]
 }

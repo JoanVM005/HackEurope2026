@@ -207,7 +207,7 @@ export default function PatientBoardPage({ onCreateSchedule }: PatientBoardPageP
     }))
   }
 
-  const handleDeletePatient = async (patientExternalId: string) => {
+  const handleDeletePatient = async (patientExternalId: number) => {
     try {
       await deletePatient(patientExternalId)
       await loadData()

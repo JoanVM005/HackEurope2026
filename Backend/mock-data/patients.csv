@@ -1,0 +1,101 @@
+patient_id,first_name,last_name,date_of_birth,age,sex,ethnicity,postcode,insurance,smoking_status,bmi,conditions,condition_codes,n_conditions,baseline_heart_rate,baseline_systolic_bp,baseline_diastolic_bp,baseline_temperature_c,baseline_respiratory_rate,baseline_spo2,prior_no_show_rate,prior_visit_count
+9fa53076-c68a-548e-b52e-cca062a1909c,Sarah,White,1958-06-02,67,F,White,JH18 3NB,NHS/Public,never,30.8,,,0,71,125,74,36.7,15,98.7,0.07,7
+feb6e49b-550e-5961-b698-7e144dca226a,Susan,White,1991-06-02,34,F,White,WM3 1UR,NHS/Public,never,22.6,Hypertension,38341003,1,64,127,75,37.4,13,98.7,0.43,9
+ffff37c4-288c-5dcd-85a8-1e05b622d25b,Betty,Davies,1966-06-02,59,F,Hispanic,TV7 1QY,NHS/Public,former,30.6,Diabetes mellitus type 2|Hypertension,44054006|38341003,2,86,145,78,37.4,20,97.0,0.32,14
+f7b6f954-3e0c-5dea-a12d-0ef7f2d6d5b2,Sarah,Hughes,1941-06-01,84,F,White,CR4 8JM,Private,never,34.4,,,0,78,144,72,36.7,19,96.2,0.23,5
+06ad19a9-1767-5c4e-8149-23407b5356b6,Jennifer,James,1964-06-01,61,F,White,ND16 1FB,NHS/Public,current,23.9,,,0,69,137,93,36.4,18,94.7,0.23,13
+1e461ee8-0b97-508a-8dc0-aa1b15893f46,Steven,Clark,1951-06-02,74,M,White,KR19 6VA,NHS/Public,never,30.0,COPD,13645005,1,82,137,85,37.1,15,93.2,0.16,15
+3aeb54ac-13dd-55dd-ab48-438915bf0735,Michael,Hill,1954-06-02,71,M,White,LB4 4ZT,NHS/Public,never,24.2,,,0,81,143,103,37.2,18,96.5,0.32,2
+0219db16-828c-54fc-ab9e-9d982aded9cb,Richard,Lewis,1997-06-01,28,M,Mixed,LA16 8UP,NHS/Public,never,21.5,,,0,65,113,73,36.7,16,97.2,0.12,5
+2e307ac9-4e1f-5ce8-be68-20d8e2e58dc5,Mark,Wilson,1975-06-02,50,M,Mixed,ZP6 1GR,NHS/Public,current,15.0,Chronic kidney disease,235856003,1,78,123,74,37.0,14,96.6,0.24,6
+572c6a62-2150-5c8f-b43c-363a372e8a9d,Nancy,Martin,2007-06-02,18,F,Mixed,XY18 1VP,NHS/Public,former,20.9,Hypertension,38341003,1,65,112,66,36.9,15,97.4,0.19,10
+28825a41-a961-507c-a605-b6a9609311b8,Matthew,Clarke,1964-06-01,61,M,Black,LY9 5RL,NHS/Public,current,28.4,Diabetes mellitus type 2|Hypertension|Heart failure,44054006|38341003|84114007,3,75,144,75,36.9,15,97.1,0.01,10
+9e77a381-d2d6-56e4-aa23-15c45826e369,Helen,Lewis,1955-06-02,70,F,White,MI1 8WD,Private,former,19.4,,,0,81,127,88,37.1,12,95.5,0.24,5
+59c72f11-8408-57ae-8ea7-53cf92c0643c,Mary,Brown,2022-06-02,3,F,Black,NF8 7CD,NHS/Public,never,25.2,,,0,59,102,61,36.9,19,100.0,0.14,10
+f5b8fed0-215d-5eb7-b7aa-15cb3eb02267,Betty,Robinson,2001-06-01,24,F,White,YU19 1HR,NHS/Public,never,28.2,Diabetes mellitus type 2,44054006,1,73,110,65,36.9,16,96.5,0.03,8
+16c9a7e4-5ba4-5db4-b3b0-839f6f71f683,Lisa,Edwards,2016-06-01,9,F,White,FE2 5PT,NHS/Public,former,20.1,,,0,61,93,56,36.7,16,97.4,0.44,10
+a154d08a-6c98-58bb-a0a7-d80ff4be8b08,Margaret,Harris,2021-06-01,4,F,White,FR2 2GM,NHS/Public,never,29.9,,,0,66,90,57,36.2,15,98.1,0.1,6
+2817db2d-e680-5091-b81e-881a0047b45e,Michael,Green,1988-06-01,37,M,Black,YA1 6EN,NHS/Public,current,28.8,,,0,83,109,65,36.3,13,97.1,0.04,8
+dd4f7a92-e502-5ab7-9d08-89c4fa1c1947,Mary,Lewis,1958-06-02,67,F,White,YO4 2IV,NHS/Public,current,23.2,Hypertension,38341003,1,74,152,89,37.2,18,97.7,0.22,10
+8cdde9aa-6c8d-53fe-a5c0-c78f14a413c6,Richard,Wilson,2022-06-02,3,M,White,YI16 6RS,Private,never,23.8,,,0,53,94,60,36.6,12,98.8,0.28,11
+53ba8ed1-9465-56e2-a34b-cd1850ccb905,Thomas,Morgan,1932-06-01,93,M,Hispanic,RJ2 6TI,NHS/Public,current,29.0,,,0,77,131,76,36.7,16,96.5,0.22,14
+cedbb066-e07c-5f7b-b9ec-9c3471cbdd13,Daniel,Thomas,1980-06-01,45,M,White,JR7 4LY,NHS/Public,never,27.9,,,0,71,121,73,36.9,17,97.2,0.01,4
+8752bced-41b7-50dc-989a-fea2ca71c849,Paul,Thomas,1964-06-01,61,M,Black,AE17 3TS,NHS/Public,never,16.9,Depression|Chronic kidney disease,35489007|235856003,2,72,130,82,36.9,16,96.4,0.12,6
+4bdbace6-0ca3-5445-91c6-1c4765fa426d,Jennifer,Robinson,1943-06-02,82,F,White,OZ9 6LA,NHS/Public,current,33.7,Diabetes mellitus type 2|Hypertension|Rheumatoid arthritis,44054006|38341003|69896004,3,81,160,88,37.2,20,94.7,0.14,7
+e57e0ee7-0f94-503c-8020-67f763fb8f1f,Susan,Lewis,1965-06-01,60,F,White,FT8 1LO,NHS/Public,former,29.0,Chronic kidney disease,235856003,1,82,120,77,37.1,17,95.9,0.04,6
+232ac565-3e06-5952-8254-3e00218877b4,Lisa,Lewis,1933-06-01,92,F,Hispanic,GW5 8MN,NHS/Public,never,30.3,Asthma,195967001,1,73,133,77,36.8,15,96.6,0.49,3
+174b3f0a-e1f9-57ef-8b6a-024ae7214780,Matthew,Taylor,1955-06-02,70,M,White,IL17 8VN,NHS/Public,never,26.6,Hypertension|Chronic kidney disease,38341003|235856003,2,81,146,89,36.9,20,97.1,0.27,8
+6df96d0c-06c1-5e33-8996-c7923196cfba,Jessica,Robinson,1971-06-02,54,F,Hispanic,HU1 7YZ,NHS/Public,former,21.3,Heart failure,84114007,1,73,112,67,36.9,14,99.6,0.13,8
+47e01661-6cea-5c4d-bd8a-2e90de4b69f9,Steven,Martin,1946-06-02,79,M,White,ND12 3BQ,NHS/Public,never,36.5,,,0,78,130,88,36.6,12,95.9,0.08,8
+2f26d253-bb6c-54e9-987f-bcb77cc0e84b,Mary,Clark,2001-06-01,24,F,White,AU15 8TK,NHS/Public,former,34.4,,,0,65,125,73,36.8,18,98.6,0.07,6
+56d0d797-5fac-5b1f-99b7-c0cb99fc811d,Christopher,Morgan,1992-06-01,33,M,White,QL14 2OD,NHS/Public,never,27.5,,,0,57,109,66,36.5,15,97.2,0.13,10
+98cc54e1-8739-507a-8a02-d4c7d07a58ac,Karen,Jackson,1971-06-02,54,F,White,TV19 5CB,NHS/Public,never,30.0,,,0,62,112,71,37.0,16,97.3,0.35,7
+1d965e3e-8b27-5d5d-beda-ae9a77d611d9,Betty,Cooper,1942-06-02,83,F,Other,RA8 8LV,Private,never,25.4,Diabetes mellitus type 2|Hypertension,44054006|38341003,2,73,165,97,37.0,16,97.3,0.29,5
+d0b9dad6-7c44-5327-a467-be4fcad33f46,Andrew,James,1947-06-02,78,M,Other,CX19 1MH,Private,current,23.4,Diabetes mellitus type 2|Hypertension|Asthma,44054006|38341003|195967001,3,88,144,73,37.0,17,98.2,0.06,11
+59a28a98-2496-5ebf-bc13-623041911c2d,Steven,Thompson,1998-06-02,27,M,White,LA10 4SO,NHS/Public,never,24.2,Diabetes mellitus type 2,44054006,1,68,131,78,36.9,18,98.0,0.29,5
+72d661ac-e744-5803-8b46-a5c5c7516068,Sarah,Clark,2024-06-01,1,F,Asian,YL16 3BJ,NHS/Public,current,22.2,,,0,65,106,64,36.7,16,99.1,0.26,7
+e2571e55-7707-5b8e-8e4a-807775ef53d4,Mary,Taylor,1977-06-01,48,F,Hispanic,MS17 8RQ,NHS/Public,former,29.3,Chronic kidney disease,235856003,1,61,126,79,37.3,17,96.8,0.17,8
+f787d74b-5839-586e-9a14-f0f35ed8da83,Mary,Watson,2007-06-02,18,F,White,GX6 2QA,NHS/Public,never,29.2,,,0,65,124,85,36.7,14,98.5,0.1,8
+08e6da9e-6372-524c-a71f-ebf5b649ddfd,Robert,Smith,1977-06-01,48,M,White,IA8 5WW,NHS/Public,current,25.6,Hypertension|Heart failure,38341003|84114007,2,73,136,68,37.1,13,98.6,0.18,6
+a1a19f0b-6edf-5336-a0a5-bd9467c6c804,Dorothy,Smith,2018-06-02,7,F,White,WQ2 5JC,NHS/Public,never,23.9,,,0,59,100,64,36.8,14,99.7,0.21,8
+38005f03-3afd-574a-bdf7-db5ea93ce84d,Jennifer,Thomas,1960-06-01,65,F,Mixed,OP4 8VN,NHS/Public,never,29.3,Heart failure,84114007,1,82,130,86,36.8,14,97.4,0.22,10
+f7a11c90-d2be-5cf9-945a-025f9eea798c,Jessica,Lewis,1969-06-01,56,F,White,VD19 3LX,NHS/Public,current,28.8,Rheumatoid arthritis,69896004,1,68,150,95,36.6,16,97.7,0.15,8
+0b9dc3de-cde0-5a7c-bdc6-365cfee285fb,Thomas,Hughes,1947-06-02,78,M,White,PZ14 8AD,NHS/Public,never,27.7,Hypertension,38341003,1,80,164,93,36.9,19,95.6,0.16,13
+622371ca-087d-513c-8655-648bd327dc60,Paul,Lee,1976-06-01,49,M,Hispanic,MK14 7KB,NHS/Public,never,21.7,Hypertension,38341003,1,67,142,79,36.7,13,97.0,0.17,8
+233df629-0a40-5be9-a7c8-5966bcdb3daf,Matthew,Clarke,1998-06-02,27,M,Other,WH8 2YO,NHS/Public,never,26.7,,,0,72,112,75,36.7,19,97.8,0.49,11
+d68fff0a-4591-5c0b-8f1b-305036c35abf,John,Walker,1950-06-02,75,M,White,CQ8 5HK,NHS/Public,never,36.0,Diabetes mellitus type 2|Hypertension|Heart failure,44054006|38341003|84114007,3,83,166,92,36.4,13,95.0,0.12,4
+7ae6786b-86ac-5d79-ad89-d1d55d2a7a32,William,Johnson,1954-06-02,71,M,Hispanic,QM7 8EV,NHS/Public,never,22.9,,,0,77,122,72,37.1,17,96.6,0.13,6
+708209b8-fc2c-5186-b0b9-1df7f55bdbc8,James,Clark,1974-06-02,51,M,White,UM16 1PP,NHS/Public,former,20.2,Diabetes mellitus type 2,44054006,1,74,122,78,36.7,17,97.2,0.35,13
+a2e8ebc2-d02d-565d-bcb9-4fc5b46636af,Linda,Hughes,1933-06-01,92,F,White,YG6 5RN,NHS/Public,current,21.0,Diabetes mellitus type 2,44054006,1,80,154,86,37.1,16,95.7,0.11,12
+dc5c5243-46f6-5661-9563-8bfe21123201,Susan,Hughes,2014-06-02,11,F,White,LE2 3TE,NHS/Public,former,35.6,,,0,78,101,65,36.4,18,96.3,0.45,9
+4b57bf1b-95a3-593d-af74-4fd23fe11cd2,Karen,Wilson,2021-06-01,4,F,White,SX12 7MX,NHS/Public,never,28.5,,,0,67,105,71,36.7,18,99.1,0.02,9
+316361a3-8035-595d-8b87-636c01baff77,Claire,King,2018-06-02,7,F,Asian,JQ9 1HX,NHS/Public,never,25.6,,,0,62,113,68,36.6,16,99.1,0.03,8
+78ce95ee-0214-55d2-b713-85848d3f6abc,Sarah,Jones,2024-06-01,1,F,White,IQ15 5FQ,NHS/Public,former,29.2,,,0,57,95,51,36.7,12,99.2,0.01,10
+5e36b655-1c5b-574e-9a48-cbb5dd446237,John,Wilson,1941-06-01,84,M,Hispanic,YC7 5DN,NHS/Public,never,29.4,Hypertension|Chronic kidney disease,38341003|235856003,2,78,159,78,36.6,12,95.9,0.24,8
+d1da9cb2-bfa2-5e47-980e-b603863fba1b,Christopher,Moore,2014-06-02,11,M,White,OG10 5YY,NHS/Public,never,27.6,,,0,68,111,66,36.5,16,98.2,0.13,8
+cf201a61-8262-522f-922b-b8beae352dbc,David,Cooper,2021-06-01,4,M,Black,GD4 7MA,NHS/Public,never,29.6,,,0,65,97,54,36.7,16,98.1,0.25,12
+e0a7d091-8f9c-5ffe-94a5-eb6214d39943,Betty,Wilson,1931-06-02,94,F,White,PF19 1KB,NHS/Public,never,24.0,Diabetes mellitus type 2|Hypertension,44054006|38341003,2,78,187,95,37.1,16,94.8,0.02,8
+1b764222-4fed-55a9-b381-37bd6c42a622,Dorothy,Davies,1969-06-01,56,F,Hispanic,BH15 1CQ,Private,former,28.0,Depression,35489007,1,77,121,84,37.1,12,98.2,0.22,11
+b8a2d65a-d60e-5000-adb9-bc84a0fa5556,Jennifer,Roberts,1953-06-01,72,F,White,SN15 4QQ,NHS/Public,never,29.2,Diabetes mellitus type 2,44054006,1,78,107,70,36.8,16,96.2,0.18,9
+dbcc5f59-04f1-5365-b735-9d9dcaafa16c,Ian,Wood,1977-06-01,48,M,Mixed,XW14 7DJ,NHS/Public,never,24.9,Diabetes mellitus type 2,44054006,1,78,121,77,36.9,15,97.0,0.26,8
+94162f46-25d1-550d-91a6-ea0bfc6627f6,Margaret,Lewis,1947-06-02,78,F,White,CK5 4XG,NHS/Public,former,26.3,Diabetes mellitus type 2,44054006,1,72,140,81,36.5,17,96.0,0.19,9
+e4dde0e7-7cd0-5e14-9562-f7d5e516a84a,Ian,Robinson,1940-06-01,85,M,Asian,OO15 2EX,NHS/Public,never,23.7,COPD|Chronic kidney disease,13645005|235856003,2,76,152,92,36.8,16,92.9,0.1,9
+18bad439-2914-5d3e-88c9-1b527dac6eac,Jennifer,Thomas,1992-06-01,33,F,White,IG5 1XS,Private,current,27.7,Depression,35489007,1,77,136,82,36.4,16,97.6,0.2,16
+1c5774a0-3d76-56ce-9c08-f01db078ac40,Richard,Lee,1979-06-02,46,M,Hispanic,QZ4 5NT,NHS/Public,never,34.3,,,0,76,113,66,36.7,16,95.3,0.09,5
+bf12668f-53b8-5534-8c04-e5445f054a99,Helen,Williams,2001-06-01,24,F,Hispanic,HB12 7OA,Private,never,35.6,,,0,78,122,73,36.9,16,98.2,0.18,10
+6a48928f-d764-5c6f-a23e-4a928d5c8080,Ian,King,1968-06-01,57,M,Asian,MB18 3WM,NHS/Public,never,21.0,,,0,80,137,89,36.8,17,98.2,0.05,6
+5aab802d-2bfd-51cb-8e4e-fac953109f28,Christopher,Lewis,1996-06-01,29,M,White,BS12 5GI,NHS/Public,never,21.3,Chronic kidney disease,235856003,1,62,124,81,36.7,14,97.3,0.45,7
+1003ee5d-3584-521c-b14c-ae43eaea4bd5,Betty,Moore,2000-06-01,25,F,White,WH2 4SM,NHS/Public,current,28.6,,,0,58,95,57,37.2,20,100.0,0.32,8
+f3beb234-7b6c-5b6f-a50c-4262ffc35e0d,Linda,Robinson,1979-06-02,46,F,Hispanic,GO9 4PA,NHS/Public,former,33.9,,,0,71,124,77,37.0,14,97.3,0.22,6
+1311954a-e3fc-5126-b1b6-7b486379e1f4,Jennifer,Walker,1975-06-02,50,F,White,LA12 6LN,Private,former,20.7,Asthma,195967001,1,84,100,72,36.4,20,96.3,0.4,10
+bf003604-6afb-50a9-ae33-16ce655c6f6f,Emma,Jackson,1931-06-02,94,F,White,MS3 2YG,NHS/Public,former,15.1,Hypertension|COPD,38341003|13645005,2,79,176,101,36.8,17,91.5,0.2,6
+23723b3c-a79f-5dcd-9508-605363f71366,Mark,Roberts,1985-06-01,40,M,White,ZB3 8MP,Private,never,34.0,,,0,76,129,83,37.3,16,98.0,0.1,8
+432492c4-12c5-59f8-9185-6486a3df7732,Emma,White,2004-06-01,21,F,Hispanic,EU12 5VF,NHS/Public,never,27.6,,,0,65,128,78,36.9,17,97.5,0.51,3
+1122a9dc-9ae6-54a8-8301-b3d1c964f738,Jennifer,Walker,2017-06-01,8,F,Mixed,GO16 1KJ,NHS/Public,former,34.4,Asthma,195967001,1,59,99,73,36.5,15,97.9,0.05,15
+a1cc85bb-9fa5-547e-95f4-778b934d64c0,Robert,Roberts,1992-06-01,33,M,White,YE18 2MB,NHS/Public,never,31.7,,,0,84,110,74,36.9,15,98.1,0.3,5
+a2166ddb-e9e6-5c9d-b564-54c595e04e18,Michael,Moore,1968-06-01,57,M,White,PL7 3RX,Private,former,15.0,COPD,13645005,1,63,130,79,36.9,16,95.6,0.26,8
+f8434d1e-2a20-5960-950c-eb457946ce02,William,Green,2023-06-02,2,M,White,XO10 5RS,NHS/Public,former,32.4,,,0,60,101,56,36.6,13,98.6,0.11,6
+fa9b5fd3-88a6-5beb-a2c4-f24b7d095c4d,Emma,Roberts,1982-06-02,43,F,White,OO1 8TX,NHS/Public,former,26.6,,,0,81,131,77,36.6,17,97.9,0.06,9
+7a37bec3-1ad7-5e89-8333-0783108d2438,Linda,Cooper,1966-06-02,59,F,White,PX1 3WX,Private,never,31.5,Asthma,195967001,1,80,125,73,36.8,16,97.8,0.08,7
+935546c5-6b9f-5981-bdd7-1acd21bbe5dc,Jennifer,Taylor,2009-06-01,16,F,Mixed,KI6 6ZZ,Private,current,36.3,,,0,70,119,81,37.1,16,98.8,0.29,7
+21930fe7-7bbb-5ac5-8afb-bd87b23e2c16,Claire,Brown,1946-06-02,79,F,White,QE17 6YE,NHS/Public,never,34.6,Hypertension|Heart failure,38341003|84114007,2,77,149,84,36.7,13,95.0,0.28,14
+5a3bd90c-c241-56f2-9301-ab92475b2a7d,Robert,Thompson,1949-06-01,76,M,White,ZH8 7UN,NHS/Public,former,30.3,Diabetes mellitus type 2|Hypertension,44054006|38341003,2,77,157,97,36.6,16,97.1,0.09,9
+f7315325-0af9-582b-9e5f-3409d837b5cc,Richard,Brown,1980-06-01,45,M,White,MH1 5VJ,NHS/Public,never,28.2,,,0,87,122,70,36.7,17,97.7,0.26,10
+c1769bed-1198-5c72-bd53-ecb457410236,Claire,Robinson,1947-06-02,78,F,Asian,PE2 1TE,NHS/Public,never,25.2,Rheumatoid arthritis,69896004,1,79,146,85,36.7,16,97.5,0.36,6
+ae745270-39bc-52c7-b0c9-4e0c3a85cd82,Robert,Taylor,1997-06-01,28,M,White,DN12 7GD,NHS/Public,former,20.9,Asthma,195967001,1,84,98,59,36.7,14,96.5,0.26,13
+b097c921-b191-507f-be57-e099ea2405f2,Ian,Robinson,1984-06-01,41,M,White,KP8 1WJ,NHS/Public,former,26.7,Diabetes mellitus type 2|Depression,44054006|35489007,2,67,106,69,36.8,14,98.5,0.08,5
+fe4ebf42-9989-51dc-84f2-fd4b4d4cbede,Jennifer,Lee,2024-06-01,1,F,White,QT9 4JN,Private,former,26.6,Hypertension|Asthma,38341003|195967001,2,56,118,60,37.4,15,97.8,0.26,4
+1d1b9c1a-d079-574e-9b33-805f18850b54,Matthew,Davies,2018-06-02,7,M,Asian,MZ7 3EZ,Private,never,33.6,,,0,79,98,59,36.6,15,97.5,0.3,12
+6ea8cf44-f7ec-55f0-b0d0-44d58a2f25d8,Dorothy,Clark,1957-06-01,68,F,White,YV3 1AQ,NHS/Public,current,17.8,Hypertension,38341003,1,71,154,77,37.0,17,97.1,0.16,11
+96dc0a40-1960-5293-94b6-fc93921df75c,Karen,Wood,1949-06-01,76,F,White,KZ13 2GR,NHS/Public,never,20.9,Diabetes mellitus type 2|Hypertension|Chronic kidney disease,44054006|38341003|235856003,3,74,163,93,37.1,16,95.6,0.15,11
+7716d700-3fc7-5e34-baf7-af43650e7039,Patricia,Jackson,1995-06-02,30,F,White,SY17 5VX,Uninsured,never,29.0,Hypertension,38341003,1,76,119,62,37.0,13,99.5,0.07,6
+e249a146-907f-5223-8345-d565113e6a6d,Nancy,Johnson,2014-06-02,11,F,White,LL16 6ME,NHS/Public,current,30.2,Diabetes mellitus type 2,44054006,1,72,102,68,36.9,16,98.5,0.23,6
+5ffb2354-1d79-500b-aed0-b3891bdbec64,Susan,James,1931-06-02,94,F,Asian,QE18 5YG,Uninsured,never,28.2,,,0,80,154,86,36.6,17,98.1,0.45,6
+d0299f29-97b4-5694-a0fa-f10ea788b1bb,Lisa,Wilson,1977-06-01,48,F,Black,AU11 2UD,Private,never,27.6,Asthma,195967001,1,78,141,85,36.5,16,97.5,0.55,6
+01978cdb-a961-5f8b-9095-c37d4178cb34,Ian,Johnson,1966-06-02,59,M,White,LK17 2DD,Uninsured,never,22.8,Hypertension,38341003,1,85,152,72,36.9,17,97.0,0.31,7
+9f07cdde-56c3-5505-ad45-5b85d9b18491,Jennifer,Smith,1958-06-02,67,F,White,OW10 7QG,NHS/Public,never,21.1,Hypertension,38341003,1,80,128,67,36.5,15,95.6,0.16,5
+cad99bfb-7a69-543c-ab40-74a8d4bcbd37,Jennifer,Taylor,1949-06-01,76,F,White,AM5 2PC,NHS/Public,current,24.7,,,0,86,129,80,36.7,13,97.5,0.17,8
+72bff855-6421-5091-b755-0e319cfbd2c8,Sarah,White,1977-06-01,48,F,White,IK15 2KZ,NHS/Public,never,25.7,,,0,77,142,101,37.0,14,97.6,0.03,9
+f821056d-0fc8-5b3a-aada-6ae942a5ddc8,Emma,Wood,1939-06-02,86,F,White,EO6 4ZY,NHS/Public,former,20.4,Hypertension,38341003,1,67,153,103,37.0,12,94.9,0.31,7
+b0bb9794-1b68-5750-b0b5-3d3161cdb530,Susan,Jackson,1934-06-02,91,F,Asian,UK8 8ZH,NHS/Public,never,28.8,Rheumatoid arthritis,69896004,1,73,153,90,36.8,16,97.1,0.23,3
+e58750de-5d79-5a43-8c53-b7a48ccff3de,Linda,Lee,2017-06-01,8,F,White,TH17 7LF,NHS/Public,never,31.7,Asthma,195967001,1,75,90,56,36.6,19,98.8,0.29,7

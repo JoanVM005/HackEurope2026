@@ -12,6 +12,7 @@ interface ScheduleItemDto {
   patient_name: string
   day: string
   hour: number
+  priority: number
   priority_score: number
   reason: string
 }
@@ -41,6 +42,7 @@ export interface ScheduleItem {
   patientName: string
   day: string
   hour: number
+  priority: number
   priorityScore: number
   reason: string
 }
@@ -75,6 +77,7 @@ function mapItem(dto: ScheduleItemDto): ScheduleItem {
     patientName: dto.patient_name,
     day: dto.day,
     hour: dto.hour,
+    priority: dto.priority,
     priorityScore: dto.priority_score,
     reason: dto.reason,
   }

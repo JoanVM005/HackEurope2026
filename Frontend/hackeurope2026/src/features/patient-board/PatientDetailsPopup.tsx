@@ -14,7 +14,7 @@ interface PatientDetailsPopupProps {
   patient: PatientCardData | null
   taskDefinitions: TaskDefinitionData[]
   onSaved: (warningMessage?: string) => Promise<void> | void
-  onDelete: (patientExternalId: string) => Promise<void> | void
+  onDelete: (patientExternalId: number) => Promise<void> | void
   onClose: () => void
 }
 

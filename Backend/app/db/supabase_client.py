@@ -206,6 +206,7 @@ class SupabaseRepository:
             patient_name=patient_name,
             day=scheduled_for.date(),
             hour=scheduled_for.hour,
+            priority=int(row.get("priority") or 1),
             priority_score=float(row["score"]),
             reason=reason,
         )
@@ -666,7 +667,9 @@ class SupabaseRepository:
 
         query = (
             self._client.table("schedule_items")
-            .select("id,patient_id,source_patient_task_id,task_name,scheduled_for,score,patients(patient_id,first_name,last_name)")
+            .select(
+                "id,patient_id,source_patient_task_id,task_name,scheduled_for,score,priority,patients(patient_id,first_name,last_name)"
+            )
             .order("scheduled_for", desc=False)
         )
         if patient_internal_id is not None:
