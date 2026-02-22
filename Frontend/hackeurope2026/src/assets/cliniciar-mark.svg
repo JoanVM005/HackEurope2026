@@ -1,0 +1,27 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="c_grad" x1="78" y1="104" x2="364" y2="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4ED2FF"/>
+      <stop offset="0.55" stop-color="#1F97E8"/>
+      <stop offset="1" stop-color="#9CE9FF"/>
+    </linearGradient>
+    <linearGradient id="plus_grad" x1="292" y1="112" x2="430" y2="236" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9EE2FF"/>
+      <stop offset="1" stop-color="#6ABBEF"/>
+    </linearGradient>
+    <linearGradient id="plus_leaf" x1="332" y1="82" x2="436" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C5E7A8"/>
+      <stop offset="1" stop-color="#B8D99D"/>
+    </linearGradient>
+    <filter id="soft_shadow" x="18" y="54" width="476" height="420" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#063B66" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#soft_shadow)">
+    <path d="M320 122H258C169.635 122 98 193.635 98 282C98 370.365 169.635 442 258 442H318L366 370H258C209.399 370 170 330.601 170 282C170 233.399 209.399 194 258 194H320V122Z" fill="url(#c_grad)"/>
+    <path d="M270 214H349V136H393V214H472V258H393V336H349V258H270V214Z" fill="url(#plus_grad)"/>
+    <path d="M349 136H393V182C393 194.15 383.15 204 371 204H349V136Z" fill="url(#plus_leaf)"/>
+    <path d="M393 214H472V236C472 248.15 462.15 258 450 258H393V214Z" fill="url(#plus_leaf)"/>
+  </g>
+</svg>

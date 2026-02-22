@@ -65,6 +65,20 @@
   padding: 1rem 1.05rem;
 }
 
+.landing-page__logo {
+  display: block;
+  margin: 0 0 0.72rem;
+}
+
+.landing-page__logo--square {
+  width: 5rem;
+  height: 5rem;
+  object-fit: cover;
+  object-position: center 36%;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
 .landing-page__card--wide {
   grid-column: 1 / -1;
 }
